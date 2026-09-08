@@ -27,7 +27,7 @@ public class ORPostStartupActivity implements ProjectActivity, DumbAware {
             ORSettings settings = project.getService(ORSettings.class);
 
             OpamEnv opamEnv = getApplication().getService(OpamEnv.class);
-            opamEnv.computeEnv(settings.getOpamLocation(), settings.getSwitchName(), settings.getCygwinBash(),
+            opamEnv.computeEnv(settings.getOpamExecutable(), settings.getOpamLocation(), settings.getSwitchName(), settings.getCygwinBash(),
                     data -> LOG.debug("Computed opam env for " + settings.getSwitchName()));
 
             project.getService(ORToolWindowManager.class).shouldShowToolWindows();

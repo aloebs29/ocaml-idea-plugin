@@ -75,8 +75,8 @@ public class FreeExpressionCompletionProvider {
             }
         }
 
-        // Pervasives is always included
-        RPsiModule pervasives = FileModuleIndexService.getInstance().getTopModule("Pervasives", project, searchScope);
+        // The implicitly opened module is always included
+        RPsiModule pervasives = FileModuleIndexService.getInstance().getImplicitModule(project, searchScope);
         if (pervasives != null) {
             addModuleExpressions(pervasives, languageProperties, searchScope, resultSet);
         }

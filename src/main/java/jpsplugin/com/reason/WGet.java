@@ -20,10 +20,16 @@ public class WGet {
     }
 
     public static boolean apply(@NotNull String urlString, @NotNull File targetFile, @NotNull ProgressIndicator indicator, double totalBytes) {
-        try {
-            // some code
-            File partFile = new File(targetFile.getPath() + ".part");
+        return apply(urlString, targetFile, indicator, totalBytes, true);
+    }
 
+    /**
+     * @param notifyOnError when {@code false}, a failure is only logged - the caller is expected to report it,
+     *                      which avoids repeating the same balloon for a download that is known to never succeed
+     */
+    public static boolean apply(@NotNull String urlString, @NotNull File targetFile, @NotNull ProgressIndicator indicator, double totalBytes, boolean notifyOnError) {
+        File partFile = new File(targetFile.getPath() + ".part");
+        try {
             if (partFile.exists()) {
                 //noinspection ResultOfMethodCallIgnored
                 partFile.delete();
@@ -73,7 +79,12 @@ public class WGet {
 
             return true;
         } catch (IOException e) {
-            Notifications.Bus.notify(new ORNotification("Reason", "Can't download " + targetFile + "\n" + e, NotificationType.ERROR));
+            //noinspection ResultOfMethodCallIgnored
+            partFile.delete(); // do not leave a truncated download behind
+            LOG.info("Can't download " + targetFile, e);
+            if (notifyOnError) {
+                Notifications.Bus.notify(new ORNotification("Reason", "Can't download " + targetFile + "\n" + e, NotificationType.ERROR));
+            }
             return false;
         }
     }

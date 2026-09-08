@@ -1,5 +1,6 @@
 package com.reason.hints;
 
+import com.intellij.notification.*;
 import com.intellij.openapi.application.*;
 import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.progress.*;
@@ -52,7 +53,17 @@ public class RincewindDownloader extends Task.Backgroundable {
             indicator.setIndeterminate(false);
             indicator.setFraction(0.0);
 
-            boolean downloaded = WGet.apply(myDownloadURL + rincewindFilename, myRincewindTarget, indicator, TOTAL_BYTES);
+            boolean downloaded = WGet.apply(myDownloadURL + rincewindFilename, myRincewindTarget, indicator, TOTAL_BYTES, false);
+            if (!downloaded) {
+                // no binary is published for every ocaml version, report it once and stop trying
+                insightManager.markUnavailable(rincewindFilename);
+                Notifications.Bus.notify(new ORNotification("Reason",
+                        "No Rincewind binary available (" + rincewindFilename + ")",
+                        "Inferred type hints are disabled for this compiler version. Build it from"
+                                + " https://github.com/giraud/rincewind and drop it under that name in "
+                                + InsightManager.getRincewindDirectory() + " to enable them.",
+                        NotificationType.WARNING));
+            }
             if (downloaded) {
                 Application application = ApplicationManager.getApplication();
                 application.executeOnPooledThread(() -> {

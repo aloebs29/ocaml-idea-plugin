@@ -1,6 +1,7 @@
 package com.reason.ide.library;
 
 import com.intellij.navigation.*;
+import com.intellij.openapi.application.*;
 import com.intellij.openapi.project.*;
 import com.intellij.openapi.roots.*;
 import com.intellij.openapi.vfs.*;
@@ -12,6 +13,7 @@ import org.jetbrains.annotations.*;
 import javax.swing.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * Manage external library based on opam settings.
@@ -19,6 +21,8 @@ import java.util.*;
  */
 public class OclLibraryRootProvider extends AdditionalLibraryRootsProvider {
     private static final Log LOG = Log.create("library.rootProvider");
+
+    private final AtomicBoolean myVfsWarmUpStarted = new AtomicBoolean(false);
 
     @Override
     public @NotNull Collection<SyntheticLibrary> getAdditionalProjectLibraries(@NotNull Project project) {
@@ -32,7 +36,46 @@ public class OclLibraryRootProvider extends AdditionalLibraryRootsProvider {
             return Collections.emptyList();
         }
 
-        return List.of(new OpamLibrary(opamLocation, opamSwitch));
+        OpamLibrary library = new OpamLibrary(opamLocation, opamSwitch);
+        if (library.getSourceRoots().isEmpty()) {
+            warmUpVfs(project, opamLocation, opamSwitch);
+        }
+
+        return List.of(library);
+    }
+
+    /**
+     * The switch lives outside of the project, so on a cold start the vfs usually knows nothing about it
+     * and the library ends up with no source root at all - nothing gets indexed, and nothing from the
+     * switch can be resolved. This runs under a read action, where a synchronous refresh is forbidden,
+     * so the vfs is warmed up on a pooled thread and the library is rebuilt once the files are known.
+     */
+    private void warmUpVfs(@NotNull Project project, @NotNull String opamLocation, @NotNull String opamSwitch) {
+        if (!myVfsWarmUpStarted.compareAndSet(false, true)) {
+            return;
+        }
+
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            try {
+                Path switchPath = Path.of(opamLocation, opamSwitch);
+                VirtualFile switchDir = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(switchPath);
+                if (switchDir == null || project.isDisposed()) {
+                    LOG.debug("Opam switch not found on disk", switchPath);
+                    return;
+                }
+
+                Collection<VirtualFile> roots = new OpamLibrary(opamLocation, opamSwitch).getSourceRoots();
+                LOG.debug("Opam switch loaded in vfs, source roots", roots);
+                if (!roots.isEmpty()) {
+                    ApplicationManager.getApplication().invokeLater(
+                            () -> WriteAction.run(() -> AdditionalLibraryRootsListener.fireAdditionalLibraryChanged(
+                                    project, "Opam switch <" + opamSwitch + ">", Collections.emptyList(), roots, "opam")),
+                            project.getDisposed());
+                }
+            } finally {
+                myVfsWarmUpStarted.set(false);
+            }
+        });
     }
 
     @Override
@@ -114,14 +157,19 @@ public class OclLibraryRootProvider extends AdditionalLibraryRootsProvider {
             return ORIcons.OCL_SDK;
         }
 
+        // Comparing the roots matters: the platform uses equality to detect that the library changed, and
+        // it does change - the roots are empty until the switch has been loaded in the vfs.
         @Override
         public boolean equals(Object other) {
-            return (other instanceof OpamLibrary); // only one opam lib authorized
+            return other instanceof OpamLibrary opamLibrary
+                    && myOpamRoot.equals(opamLibrary.myOpamRoot)
+                    && myOpamSwitch.equals(opamLibrary.myOpamSwitch)
+                    && mySourceRoots.equals(opamLibrary.mySourceRoots);
         }
 
         @Override
         public int hashCode() {
-            return mySourceRoots.hashCode();
+            return Objects.hash(myOpamRoot, myOpamSwitch, mySourceRoots);
         }
     }
 }

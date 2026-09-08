@@ -19,8 +19,11 @@ import java.util.*;
 
 public class OpamConfigurationTab {
     private static final String[] EMPTY_COLUMNS = {};
+    @Nls
+    private static final String OPAM_EXECUTABLE_LABEL = "Choose opam Executable: ";
 
     private JPanel myRootPanel;
+    private TextFieldWithBrowseButton myOpamExecutable;
     private TextFieldWithBrowseButton myOpamLocation;
     private JLabel myDetectionLabel;
     private JComboBox<String> mySwitchSelect;
@@ -46,6 +49,10 @@ public class OpamConfigurationTab {
 
         myOpamLocation.getTextField().addFocusListener(focusListener);
         myOpamLocation.addBrowseFolderListener(browseListener);
+
+        myOpamExecutable.addBrowseFolderListener(OPAM_EXECUTABLE_LABEL, null, project,
+                FileChooserDescriptorFactory.createSingleFileOrExecutableAppDescriptor());
+        myOpamExecutable.getTextField().addFocusListener(getExecutableFocusListener(switchName));
 
         mySwitchSelect.addItemListener(itemEvent -> {
             if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
@@ -87,6 +94,24 @@ public class OpamConfigurationTab {
         };
     }
 
+    /** A different opam binary may know about a different set of switches, so refresh them. */
+    private @NotNull FocusListener getExecutableFocusListener(@NotNull String switchName) {
+        final String[] previousExecutable = new String[1];
+
+        return new FocusListener() {
+            @Override public void focusGained(FocusEvent e) {
+                previousExecutable[0] = myOpamExecutable.getText();
+            }
+
+            @Override public void focusLost(FocusEvent e) {
+                if (!myOpamExecutable.getText().equals(previousExecutable[0])) {
+                    String selectedSwitch = getSelectedSwitch();
+                    createSwitch(myOpamLocation.getText(), selectedSwitch == null ? switchName : selectedSwitch);
+                }
+            }
+        };
+    }
+
     private void detectSwitchSystem(@NotNull VirtualFile dir) {
         myIsWsl = dir.getPath().replace("/", "\\").startsWith(WslConstants.UNC_PREFIX);
         myCygwinBash = null;
@@ -114,37 +139,40 @@ public class OpamConfigurationTab {
     void createSwitch(@NotNull String opamLocation, @NotNull String switchName) {
         ApplicationManager.getApplication()
                 .getService(OpamProcess.class)
-                .listSwitch(opamLocation, myCygwinBash, opamSwitches -> {
-                    boolean switchEnabled = opamSwitches != null && !opamSwitches.isEmpty();
-                    mySwitchSelect.removeAllItems();
-                    mySwitchSelect.setEnabled(switchEnabled);
-                    if (switchEnabled) {
-                        boolean useOpamSelection = switchName.isEmpty();
-                        //System.out.println("Add: [" + Joiner.join(", ", opamSwitches) + "]");
-                        for (OpamProcess.OpamSwitch opamSwitch : opamSwitches) {
-                            mySwitchSelect.addItem(opamSwitch.name());
-                            if (opamSwitch.isSelected() && useOpamSelection) {
-                                mySwitchSelect.setSelectedIndex(mySwitchSelect.getItemCount() - 1);
+                .listSwitch(myOpamExecutable.getText(), opamLocation, myCygwinBash, opamSwitches ->
+                        // the process terminates on a pooler thread, but swing models are EDT only.
+                        // `any` modality is required, the settings dialog is modal.
+                        ApplicationManager.getApplication().invokeLater(() -> {
+                            boolean switchEnabled = opamSwitches != null && !opamSwitches.isEmpty();
+                            mySwitchSelect.removeAllItems();
+                            mySwitchSelect.setEnabled(switchEnabled);
+                            if (switchEnabled) {
+                                boolean useOpamSelection = switchName.isEmpty();
+                                for (OpamProcess.OpamSwitch opamSwitch : opamSwitches) {
+                                    mySwitchSelect.addItem(opamSwitch.name());
+                                    if (opamSwitch.isSelected() && useOpamSelection) {
+                                        mySwitchSelect.setSelectedIndex(mySwitchSelect.getItemCount() - 1);
+                                    }
+                                }
+                                if (!useOpamSelection) {
+                                    mySwitchSelect.setSelectedItem(switchName);
+                                }
+                            } else {
+                                clearEnv();
                             }
-                        }
-                        if (!useOpamSelection) {
-                            mySwitchSelect.setSelectedItem(switchName);
-                        }
-                    } else {
-                        clearEnv();
-                    }
-                });
+                        }, ModalityState.any()));
     }
 
     private void listLibraries(@NotNull String version) {
         ApplicationManager.getApplication().getService(OpamProcess.class)
-                .list(myOpamLocation.getText(), version, myCygwinBash, libs -> {
-                    myEnv.clear();
-                    if (libs != null) {
-                        myEnv.addAll(libs);
-                    }
-                    myOpamLibraries.setModel(createDataModel());
-                });
+                .list(myOpamExecutable.getText(), myOpamLocation.getText(), version, myCygwinBash, libs ->
+                        ApplicationManager.getApplication().invokeLater(() -> {
+                            myEnv.clear();
+                            if (libs != null) {
+                                myEnv.addAll(libs);
+                            }
+                            myOpamLibraries.setModel(createDataModel());
+                        }, ModalityState.any()));
     }
 
     void clearEnv() {
@@ -186,6 +214,14 @@ public class OpamConfigurationTab {
         return findBinary(dir.getParent());
     }
 
+    public TextFieldWithBrowseButton getOpamExecutable() {
+        return myOpamExecutable;
+    }
+
+    public void setOpamExecutable(@NotNull String opamExecutable) {
+        myOpamExecutable.setText(opamExecutable);
+    }
+
     public TextFieldWithBrowseButton getOpamLocation() {
         return myOpamLocation;
     }
@@ -204,6 +240,10 @@ public class OpamConfigurationTab {
 
     public @Nullable String getCygwinBash() {
         return myCygwinBash;
+    }
+
+    public boolean isOpamExecutableModified(String opamExecutable) {
+        return !myOpamExecutable.getText().equals(opamExecutable);
     }
 
     public boolean isOpamLocationModified(String opamLocation) {

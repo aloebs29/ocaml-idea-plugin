@@ -55,6 +55,10 @@ public class DuneProjectRootStep extends ProjectImportWizardStep {
 
         builder.setProjectRoot(projectRoot);
         builder.setOpamSettings(new DuneProjectImportBuilder.OpamSettings() {
+            @Override public String getOpamExecutable() {
+                return myOpamConfigurationTab.getOpamExecutable().getText();
+            }
+
             @Override public String getOpamLocation() {
                 return myOpamConfigurationTab.getOpamLocation().getText();
             }

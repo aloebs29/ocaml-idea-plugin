@@ -98,6 +98,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         mySettings.setBsEnabled(f_bsIsEnabled.isSelected());
         mySettings.setBsPlatformLocation(sanitizeInput(f_bsPlatformLocation));
         // Opam
+        mySettings.setOpamExecutable(sanitizeInput(myOpamConfigurationTab.getOpamExecutable()));
         mySettings.setOpamLocation(sanitizeInput(myOpamConfigurationTab.getOpamLocation()));
         mySettings.setCygwinBash(myCygwinBash);
         mySettings.setIsWsl(myIsWsl);
@@ -109,7 +110,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         createExternalLibraryDependency(mySettings.getProject(), mySettings.getSwitchName(), mySettings.getOpamLocation());
         // Compute env
         OpamEnv opamEnv = getApplication().getService(OpamEnv.class);
-        opamEnv.computeEnv(mySettings.getOpamLocation(), mySettings.getSwitchName(), mySettings.getCygwinBash(), null);
+        opamEnv.computeEnv(mySettings.getOpamExecutable(), mySettings.getOpamLocation(), mySettings.getSwitchName(), mySettings.getCygwinBash(), null);
         // Display compiler info in console (if any)
         myProject.getService(ORToolWindowManager.class).shouldShowToolWindows();
     }
@@ -181,6 +182,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         boolean isBsPlatformLocationModified =
                 !f_bsPlatformLocation.getText().equals(mySettings.getBsPlatformLocation());
         // Opam
+        boolean isOpamExecutableModified = myOpamConfigurationTab.isOpamExecutableModified(mySettings.getOpamExecutable());
         boolean isOpamLocationModified = myOpamConfigurationTab.isOpamLocationModified(mySettings.getOpamLocation());
         boolean isOpamSwitchModified = myOpamConfigurationTab.isOpamSwitchModified(mySettings.getSwitchName());
         // Esy
@@ -188,7 +190,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
                 !f_esyExecutable.getText().equals(mySettings.getEsyExecutable());
 
         return isFormatOnSaveModified || isFormatWidthColumnsModified || isUseSuperErrorModified
-                || isBsEnabledModified || isBsPlatformLocationModified || isOpamLocationModified
+                || isBsEnabledModified || isBsPlatformLocationModified || isOpamExecutableModified || isOpamLocationModified
                 || isOpamSwitchModified || isEsyExecutableModified;
     }
 
@@ -204,6 +206,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         // Opam
         myCygwinBash = mySettings.getCygwinBash();
         myIsWsl = mySettings.isWsl();
+        myOpamConfigurationTab.setOpamExecutable(mySettings.getOpamExecutable());
         myOpamConfigurationTab.setOpamLocation(mySettings.getOpamLocation());
         myOpamConfigurationTab.setDetectionText();
         myOpamConfigurationTab.createSwitch(mySettings.getOpamLocation(), mySettings.getSwitchName());

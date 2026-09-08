@@ -40,6 +40,16 @@ public abstract class OCamlExecutable {
     public abstract @NotNull GeneralCommandLine patchCommandLine(@NotNull GeneralCommandLine commandLine,
                                                                  String pathToBinary, boolean login);
 
+    /** {@code true} when commands run directly on the host, without going through wsl or a cygwin shell. */
+    public boolean isNativeLocal() {
+        return false;
+    }
+
+    /** Translates a host path to the filesystem namespace commands are executed in. */
+    public @NotNull String toExecutablePath(@NotNull String path) {
+        return path;
+    }
+
     // From GitExecutableManager
     @Nullable
     public static Pair<String, WSLDistribution> parseWslPath(@NotNull String path) {
@@ -84,6 +94,12 @@ public abstract class OCamlExecutable {
         }
 
         @Override
+        public @NotNull String toExecutablePath(@NotNull String path) {
+            Pair<String, WSLDistribution> pair = parseWslPath(path.replace("/", "\\"));
+            return pair == null ? path : pair.first;
+        }
+
+        @Override
         public @NotNull String toString() {
             return m_distribution.getPresentableName();
         }
@@ -124,6 +140,25 @@ public abstract class OCamlExecutable {
             LOG.debug("[" + myId + (isCygwin ? "/cygwin" : "") + "] " + "Patched as: " + commandLine.getCommandLineString());
 
             return commandLine;
+        }
+
+        @Override
+        public boolean isNativeLocal() {
+            return myCygwinBash == null;
+        }
+
+        @Override
+        public @NotNull String toExecutablePath(@NotNull String path) {
+            if (myCygwinBash == null) {
+                return path;
+            }
+
+            // cygwin only understands its own posix paths
+            String posixPath = path.replace("\\", "/");
+            if (posixPath.length() > 1 && posixPath.charAt(1) == ':') {
+                posixPath = "/cygdrive/" + Character.toLowerCase(posixPath.charAt(0)) + posixPath.substring(2);
+            }
+            return posixPath;
         }
 
         @Override

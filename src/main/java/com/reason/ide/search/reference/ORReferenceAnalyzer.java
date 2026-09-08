@@ -262,8 +262,8 @@ public class ORReferenceAnalyzer {
 
         PsiManager psiManager = PsiManager.getInstance(project);
 
-        // Add pervasives (always included)
-        RPsiModule pervasives = FileModuleIndexService.getInstance().getTopModule("Pervasives", project, scope);
+        // Add the implicitly opened module (always included)
+        RPsiModule pervasives = FileModuleIndexService.getInstance().getImplicitModule(project, scope);
         if (pervasives != null) {
             ResolutionElement resolutionElement = new ResolutionElement(pervasives, true);
             if (LOG.isTraceEnabled()) {

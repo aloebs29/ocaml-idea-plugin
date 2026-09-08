@@ -13,6 +13,7 @@ import org.jetbrains.annotations.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 import static jpsplugin.com.reason.Platform.*;
@@ -22,6 +23,12 @@ public final class InsightManager {
     private static final Log LOG = Log.create("hints");
 
     final @NotNull AtomicBoolean isDownloading = new AtomicBoolean(false);
+    /**
+     * Rincewind binaries that could not be downloaded. There is no published build for every ocaml
+     * version (nothing above 4.14 at the moment), so retrying on every opened file would only produce
+     * a stream of identical failures.
+     */
+    private final @NotNull Set<String> myUnavailable = ConcurrentHashMap.newKeySet();
     private final @NotNull Project myProject;
 
     InsightManager(@NotNull Project project) {
@@ -41,10 +48,20 @@ public final class InsightManager {
             return;
         }
 
+        if (myUnavailable.contains(rincewindName)) {
+            LOG.debug("No rincewind binary available, skip downloading", rincewindName);
+            return;
+        }
+
         File targetFile = getRincewindTarget(rincewindName);
         if (targetFile != null && !targetFile.exists()) {
             ProgressManager.getInstance().run(new RincewindDownloader(myProject, targetFile));
         }
+    }
+
+    /** Remembers that a binary can't be downloaded, so that it is not attempted again in this session. */
+    void markUnavailable(@NotNull String rincewindName) {
+        myUnavailable.add(rincewindName);
     }
 
     public void queryTypes(@Nullable VirtualFile sourceFile, @NotNull Path cmtPath, @NotNull ORProcessTerminated<InferredTypes> runAfter) {
@@ -80,13 +97,40 @@ public final class InsightManager {
                 : myProject.getService(RincewindProcess.class).dumpTypes(rincewindFile.getPath(), cmtFile);
     }
 
+    /**
+     * Binaries are kept outside of the plugin directory: that directory is wiped when the plugin is
+     * updated or re-installed, which would silently discard a binary that was built by hand.
+     * A binary sitting in the old location is still honoured, so existing installations keep working.
+     */
     @Nullable File getRincewindTarget(@Nullable String filename) {
-        Path pluginLocation = getPluginLocation();
-        String pluginPath = pluginLocation == null ? System.getProperty("java.io.tmpdir") : pluginLocation.toFile().getPath();
-        if (LOG.isTraceEnabled()) {
-            LOG.trace("Rincewind filename: " + filename + " at " + pluginPath);
+        if (filename == null) {
+            return null;
         }
-        return filename == null ? null : new File(pluginPath, filename);
+
+        File target = new File(getRincewindDirectory(), filename);
+        if (!target.exists()) {
+            Path pluginLocation = getPluginLocation();
+            File legacyTarget = pluginLocation == null ? null : new File(pluginLocation.toFile(), filename);
+            if (legacyTarget != null && legacyTarget.exists()) {
+                LOG.debug("Rincewind found in the plugin directory", legacyTarget);
+                return legacyTarget;
+            }
+        }
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Rincewind filename: " + filename + " at " + target.getParent());
+        }
+        return target;
+    }
+
+    /** Where rincewind binaries are downloaded to, created if needed. */
+    public static @NotNull File getRincewindDirectory() {
+        File directory = new File(PathManager.getSystemPath(), "reasonml");
+        if (!directory.exists() && !directory.mkdirs()) {
+            LOG.warn("Can't create " + directory + ", falling back to the temp directory");
+            return new File(System.getProperty("java.io.tmpdir"));
+        }
+        return directory;
     }
 
     @Nullable String getRincewindFilename(@Nullable VirtualFile sourceFile, @NotNull String excludedVersion) {

@@ -22,6 +22,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
     private String m_bsPlatformLocation = "";
 
     // Dune
+    private String myOpamExecutable = "";
     private String myOpamLocation = "";
     private String mySwitchName = "";
     private String myCygwinBash = null;
@@ -42,6 +43,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
         state.isUseSuperErrors = myUseSuperErrors;
         state.isBsEnabled = m_isBsEnabled;
         state.bsPlatformLocation = m_bsPlatformLocation;
+        state.opamExecutable = myOpamExecutable;
         state.opamLocation = myOpamLocation;
         state.cygwinBash = myCygwinBash;
         state.isWsl = myIsWsl;
@@ -57,6 +59,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
         myUseSuperErrors = state.isUseSuperErrors;
         m_isBsEnabled = state.isBsEnabled;
         m_bsPlatformLocation = state.bsPlatformLocation;
+        myOpamExecutable = state.opamExecutable;
         myOpamLocation = state.opamLocation;
         myCygwinBash = state.cygwinBash;
         myIsWsl = state.isWsl;
@@ -115,6 +118,14 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
         m_bsPlatformLocation = bsPlatformLocation;
     }
 
+    public @NotNull String getOpamExecutable() {
+        return myOpamExecutable == null ? "" : myOpamExecutable;
+    }
+
+    public void setOpamExecutable(@Nullable String executable) {
+        myOpamExecutable = executable;
+    }
+
     public @NotNull String getOpamLocation() {
         return myOpamLocation == null ? "" : myOpamLocation;
     }
@@ -165,6 +176,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
         public boolean isBsEnabled = IS_BS_ENABLED_DEFAULT;
         public String bsPlatformLocation = "";
         // Dune
+        public String opamExecutable = "";
         public String opamLocation = "";
         public String switchName = "";
         public String cygwinBash = null;

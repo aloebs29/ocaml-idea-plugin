@@ -48,6 +48,15 @@ public final class FileModuleIndexService {
                 }).orElse(null);
     }
 
+    /**
+     * The module that is implicitly opened in every file: {@code Stdlib} since ocaml 4.07,
+     * {@code Pervasives} before that - it was deprecated in 4.08 and removed in 5.0.
+     */
+    public @Nullable RPsiModule getImplicitModule(@NotNull Project project, @NotNull GlobalSearchScope scope) {
+        RPsiModule stdlib = getTopModule("Stdlib", project, scope);
+        return stdlib == null ? getTopModule("Pervasives", project, scope) : stdlib;
+    }
+
     public @NotNull List<FileModuleData> getTopModuleData(@NotNull String name, @NotNull GlobalSearchScope scope) {
         return FileModuleIndex.getValues(name, scope);
     }

@@ -136,6 +136,7 @@ public class DuneProjectImportBuilder extends ProjectImportBuilder<ImportedDuneB
 
             if (myOpamSettings != null) {
                 ORSettings settings = project.getService(ORSettings.class);
+                settings.setOpamExecutable(myOpamSettings.getOpamExecutable());
                 settings.setOpamLocation(myOpamSettings.getOpamLocation());
                 settings.setSwitchName(myOpamSettings.getOpamSwitch());
                 settings.setIsWsl(myOpamSettings.isWsl());
@@ -147,6 +148,8 @@ public class DuneProjectImportBuilder extends ProjectImportBuilder<ImportedDuneB
     }
 
     public interface OpamSettings {
+        String getOpamExecutable();
+
         String getOpamLocation();
 
         String getOpamSwitch();
