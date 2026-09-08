@@ -1,6 +1,5 @@
 package com.reason;
 
-import com.intellij.json.*;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.*;
 import com.intellij.openapi.vfs.*;
@@ -37,12 +36,12 @@ public class FileHelper {
         return file != null && RESCRIPT_CONFIG_FILENAME.equals(file.getName());
     }
 
+    /*
+     Matched on the name alone: testing the file type would mean touching com.intellij.json, which is a
+     separate plugin since 2025.1 and is not on this plugin's classpath.
+     */
     public static boolean isCompilerConfigJson(@Nullable VirtualFile file) {
-        if (file != null && file.getFileType() instanceof JsonFileType) {
-            String fileName = file.getName();
-            return RESCRIPT_CONFIG_FILENAME.equals(fileName) || BS_CONFIG_FILENAME.equals(fileName);
-        }
-        return false;
+        return isRescriptConfigJson(file) || isBsConfigJson(file);
     }
 
     public static boolean isReason(@Nullable FileType fileType) {

@@ -1,6 +1,5 @@
 package com.reason.ide;
 
-import com.intellij.json.psi.*;
 import com.intellij.psi.*;
 import com.reason.comp.esy.*;
 import com.reason.ide.files.*;
@@ -81,7 +80,9 @@ public class IconProvider extends com.intellij.ide.IconProvider {
         }
     }
 
+    /* isEsyPackageJson already filters on the json extension, so no need to ask com.intellij.json what a
+       JsonFile is — that plugin is not on this plugin's classpath. */
     private boolean isEsyPackageJson(@Nullable PsiFile element) {
-        return element instanceof JsonFile && EsyPackageJson.isEsyPackageJson(ORFileUtils.getVirtualFile(element));
+        return EsyPackageJson.isEsyPackageJson(ORFileUtils.getVirtualFile(element));
     }
 }

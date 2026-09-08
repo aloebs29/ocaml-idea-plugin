@@ -66,6 +66,28 @@ Set **Opam root location** in the same tab to your opam root (`~/.opam` on macOS
 
 On Windows only, WSL and Cygwin roots are also detected and commands are run inside them.
 
+### ocp-indent (indentation while typing) — optional
+
+Pressing enter in an OCaml file indents the new line using
+[`ocp-indent`](https://github.com/OCamlPro/ocp-indent), taken from the selected opam switch:
+
+```
+opam install ocp-indent
+```
+
+The plugin runs `ocp-indent --numeric --lines=n-n` on the text above and including the caret's line, and
+uses the column it reports. **The opam root and switch must be configured** (see above) — that is how the
+binary is found, so with them unset nothing is indented. If ocp-indent isn't installed either, nothing
+breaks: the editor falls back to keeping the previous line's indentation, and the attempt is retried at
+most every 30 seconds so a missing binary doesn't cost a process per keystroke.
+
+Every reason indentation gives up is logged under `format.ocaml.indent` in `idea.log`, so that is the first
+place to look if enter leaves the caret in column 0.
+
+`ocp-indent` reads a `.ocp-indent` file from the project root, so per-project indentation settings are
+honoured. Note that reformatting the whole file (ctrl+alt+L) still goes through `ocamlformat`, which is a
+separate tool with its own configuration.
+
 ### Rincewind (inferred type hints) — must be built by hand
 
 Rincewind is a small OCaml binary that reads `.cmt` files to produce inferred type hints. **Upstream never
@@ -122,6 +144,13 @@ per-language extensions you want, and drop the matching `exclude` lines from the
 Note that `ORCodeFactory` now builds its throwaway rename PSI as OCaml rather than Reason, and the stub
 element type holders for Reason and ReScript are still registered — they have to be created before index
 initialization completes even though the languages are not.
+
+The plugin also no longer touches `com.intellij.json`, which the platform split out into a separate plugin
+in 2025.1: its classes are not on the classpath and referencing one throws `NoClassDefFoundError` at
+runtime. The `ORConfigJsonFileType` that gave `bsconfig.json`/`rescript.json` a BuckleScript icon was
+deleted for that reason. Restoring it means adding `<depends>com.intellij.modules.json</depends>` to
+`plugin.xml` (and declaring the bundled plugin in `gradle.properties`), which raises the minimum platform
+version — the file-name checks in `FileHelper` do not need any of that.
 
 ## License
 

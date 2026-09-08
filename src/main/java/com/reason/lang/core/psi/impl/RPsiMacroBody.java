@@ -1,6 +1,5 @@
 package com.reason.lang.core.psi.impl;
 
-import com.intellij.json.psi.impl.*;
 import com.intellij.lang.*;
 import com.intellij.openapi.util.*;
 import com.intellij.psi.*;
@@ -28,14 +27,15 @@ public class RPsiMacroBody extends ORCompositePsiElement<ORLangTypes> implements
         return this;
     }
 
+    /*
+     This used to return com.intellij.json's JSStringLiteralEscaper, which decoded backslash escapes. That
+     class lives in a separate plugin since 2025.1 and is not on this plugin's classpath, so the platform's
+     plain escaper is used instead: the injected text is taken verbatim, which is right for the `{|...|}`
+     literals macro bodies normally use, and only loses escape decoding for the quoted form.
+     */
     @Override
     public @NotNull LiteralTextEscaper<? extends PsiLanguageInjectionHost> createLiteralTextEscaper() {
-        return new JSStringLiteralEscaper<PsiLanguageInjectionHost>(this) {
-            @Override
-            protected boolean isRegExpLiteral() {
-                return false;
-            }
-        };
+        return LiteralTextEscaper.createSimple(this, false);
     }
 
     public @Nullable TextRange getMacroTextRange() {

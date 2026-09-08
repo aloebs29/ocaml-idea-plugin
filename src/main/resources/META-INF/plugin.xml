@@ -152,6 +152,9 @@
         <lang.commenter language="Mly" implementationClass="com.reason.ide.comment.MlyCommenter"/>
         <lang.commenter language="Dune" implementationClass="com.reason.ide.comment.DuneCommenter"/>
 
+        <!-- indentation on enter, delegated to ocp-indent from the opam switch -->
+        <lineIndentProvider implementation="com.reason.ide.format.OclLineIndentProvider"/>
+
         <lang.braceMatcher language="OCaml" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="OCamlP4" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="Mlg" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
