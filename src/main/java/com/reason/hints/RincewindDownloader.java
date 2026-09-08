@@ -57,7 +57,7 @@ public class RincewindDownloader extends Task.Backgroundable {
             if (!downloaded) {
                 // no binary is published for every ocaml version, report it once and stop trying
                 insightManager.markUnavailable(rincewindFilename);
-                Notifications.Bus.notify(new ORNotification("Reason",
+                Notifications.Bus.notify(new ORNotification("OCaml",
                         "No Rincewind binary available (" + rincewindFilename + ")",
                         "Inferred type hints are disabled for this compiler version. Build it from"
                                 + " https://github.com/giraud/rincewind and drop it under that name in "

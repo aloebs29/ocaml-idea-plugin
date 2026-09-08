@@ -21,14 +21,6 @@ public class ORSignatureTest extends LightJavaCodeInsightTestCase {
     private static final OclLanguage OCL = OclLanguage.INSTANCE;
 
     @Test
-    public void testReasonSingleFun() {
-        RPsiSignature sig = makeSignature(RML, "unit=>unit");
-
-        assertEquals("unit=>unit", sig.asText(RML));
-        assertEquals("unit -> unit", sig.asText(OCL));
-    }
-
-    @Test
     public void testOCamlSingleFun() {
         RPsiSignature sig = makeSignature(OCL, "unit->unit");
 
@@ -37,27 +29,11 @@ public class ORSignatureTest extends LightJavaCodeInsightTestCase {
     }
 
     @Test
-    public void testReasonSingle() {
-        RPsiSignature sig = makeSignature(RML, "unit");
-
-        assertEquals("unit", sig.asText(RML));
-        assertEquals("unit", sig.asText(OCL));
-    }
-
-    @Test
     public void testOCamlSingle() {
         RPsiSignature sig = makeSignature(OCL, "unit");
 
         assertEquals("unit", sig.asText(RML));
         assertEquals("unit", sig.asText(OCL));
-    }
-
-    @Test
-    public void testReasonMultiFun() {
-        RPsiSignature sig = makeSignature(RML, "unit => string => float => unit");
-
-        assertEquals("unit => string => float => unit", sig.asText(RML));
-        assertEquals("unit -> string -> float -> unit", sig.asText(OCL));
     }
 
     @Test
@@ -74,15 +50,6 @@ public class ORSignatureTest extends LightJavaCodeInsightTestCase {
 
         assertEquals("<a:string> -> string", sig.asText(OCL));
         assertEquals("{. a:string } => string", sig.asText(RML));
-    }
-
-    @Test
-    public void testReasonJsObject() {
-        RPsiSignature sig = makeSignature(RML, "{. a:string, b:int } => string");
-
-        assertEquals("<a:string; b:int> Js.t -> string", sig.asText(OCL));
-        assertEquals("{. a:string, b:int } => string", sig.asText(RML));
-        //assertEquals("{. a:string, b:int } => string", sig.asText(NS));
     }
 
     @Test

@@ -1,7 +1,6 @@
 package jpsplugin.com.reason;
 
 import com.intellij.execution.configurations.*;
-import com.intellij.ide.plugins.*;
 import com.intellij.openapi.extensions.*;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.*;
@@ -46,12 +45,6 @@ public class Platform {
 
     public static boolean isWindows() {
         return SystemInfo.isWindows;
-    }
-
-    @Nullable
-    public static Path getPluginLocation() {
-        IdeaPluginDescriptor plugin = PluginManagerCore.getPlugin(PluginId.getId("reasonml"));
-        return plugin == null ? null : plugin.getPluginPath();
     }
 
     public static @NotNull Map<Module, VirtualFile> findModulesFor(@NotNull Project project, @NotNull String filename) {

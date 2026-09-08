@@ -27,7 +27,7 @@ public class FreeCompletion_OCL_Test extends ORBasePlatformTestCase {
 
     @Test
     public void test_underscore() {
-        configureCode("Dummy.re", "let _ = 1; <caret>");
+        configureCode("Dummy.ml", "let _ = 1 <caret>");
 
         myFixture.complete(CompletionType.BASIC, 1);
         List<String> elements = myFixture.getLookupElementStrings();

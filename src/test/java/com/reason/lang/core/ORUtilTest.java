@@ -33,8 +33,8 @@ public class ORUtilTest extends ORBasePlatformTestCase {
     }
 
     @Test
-    public void test_Rml_letQualifiedPath() {
-        FileBase f = configureCode("A.re", "let make = () => { let x = 1; }");
+    public void test_letQualifiedPath() {
+        FileBase f = configureCode("A.ml", "let make () = let x = 1 in ()");
         RPsiLet e = ImmutableList.copyOf(PsiTreeUtil.findChildrenOfType(f, RPsiLet.class)).get(1);
 
         String qPath = Joiner.join(".", ORUtil.getQualifiedPath(e));
@@ -43,8 +43,8 @@ public class ORUtilTest extends ORBasePlatformTestCase {
     }
 
     @Test
-    public void test_Rml_letDestructuredQualifiedPath() {
-        FileBase f = configureCode("A.re", "module M = { let make = () => { let (x, y) = other; }; }");
+    public void test_letDestructuredQualifiedPath() {
+        FileBase f = configureCode("A.ml", "module M = struct let make () = let (x, y) = other in () end");
         RPsiLet letExpression = ImmutableList.copyOf(PsiTreeUtil.findChildrenOfType(f, RPsiLet.class)).get(1);
 
         String qualifiedPath = Joiner.join(".", ORUtil.getQualifiedPath(letExpression));
@@ -54,26 +54,25 @@ public class ORUtilTest extends ORBasePlatformTestCase {
 
     @Test
     public void test_in_interface_file() {
-        FileBase intf = configureCode("A.resi", "module M = { let x: int }");
-        FileBase impl = configureCode("A.res", "module M = { let x = 1 }");
+        FileBase intf = configureCode("A.mli", "module M : sig val x : int end");
+        FileBase impl = configureCode("A.ml", "module M = struct let x = 1 end");
 
-        assertTrue(ORUtil.inInterface(PsiTreeUtil.findChildOfType(intf, RPsiLet.class)));
+        assertTrue(ORUtil.inInterface(PsiTreeUtil.findChildOfType(intf, RPsiVal.class)));
         assertFalse(ORUtil.inInterface(PsiTreeUtil.findChildOfType(impl, RPsiLet.class)));
     }
 
     @Test
     public void test_in_interface_module_type() {
-        FileBase f = configureCode("A.res", "module type M = { let x: 1 }");
+        FileBase f = configureCode("A.ml", "module type M = sig val x : int end");
 
-        assertTrue(ORUtil.inInterface(PsiTreeUtil.findChildOfType(f, RPsiLet.class)));
+        assertTrue(ORUtil.inInterface(PsiTreeUtil.findChildOfType(f, RPsiVal.class)));
     }
 
     @Test
     public void test_in_interface_anonymous_module_type() {
-        FileBase f = configureCode("A.res", "module M: { let x: int } = { let x = 1 }");
-        ImmutableList<RPsiLet> es = ImmutableList.copyOf(PsiTreeUtil.findChildrenOfType(f, RPsiLet.class));
+        FileBase f = configureCode("A.ml", "module M : sig val x : int end = struct let x = 1 end");
 
-        assertTrue(ORUtil.inInterface(es.get(0)));
-        assertFalse(ORUtil.inInterface(es.get(1)));
+        assertTrue(ORUtil.inInterface(PsiTreeUtil.findChildOfType(f, RPsiVal.class)));
+        assertFalse(ORUtil.inInterface(PsiTreeUtil.findChildOfType(f, RPsiLet.class)));
     }
 }

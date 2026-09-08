@@ -9,8 +9,8 @@ import java.util.*;
 
 public class FileBaseTest extends ORBasePlatformTestCase {
   @Test
-  public void test_Rml_getQNameExpression() {
-    FileBase f = configureCode("A.re", "module B = { let x = 1; }; let x = 2;");
+  public void test_getQNameExpression() {
+    FileBase f = configureCode("A.ml", "module B = struct let x = 1 end\nlet x = 2");
     List<RPsiLet> e = f.getQualifiedExpressions("A.B.x", RPsiLet.class);
 
     assertSize(1, e);

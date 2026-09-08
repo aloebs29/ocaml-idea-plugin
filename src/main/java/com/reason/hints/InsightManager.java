@@ -100,7 +100,6 @@ public final class InsightManager {
     /**
      * Binaries are kept outside of the plugin directory: that directory is wiped when the plugin is
      * updated or re-installed, which would silently discard a binary that was built by hand.
-     * A binary sitting in the old location is still honoured, so existing installations keep working.
      */
     @Nullable File getRincewindTarget(@Nullable String filename) {
         if (filename == null) {
@@ -108,24 +107,21 @@ public final class InsightManager {
         }
 
         File target = new File(getRincewindDirectory(), filename);
-        if (!target.exists()) {
-            Path pluginLocation = getPluginLocation();
-            File legacyTarget = pluginLocation == null ? null : new File(pluginLocation.toFile(), filename);
-            if (legacyTarget != null && legacyTarget.exists()) {
-                LOG.debug("Rincewind found in the plugin directory", legacyTarget);
-                return legacyTarget;
-            }
-        }
-
         if (LOG.isTraceEnabled()) {
             LOG.trace("Rincewind filename: " + filename + " at " + target.getParent());
         }
         return target;
     }
 
-    /** Where rincewind binaries are downloaded to, created if needed. */
+    private static final String DIRECTORY_NAME = "ocaml";
+
+    /**
+     * Where rincewind binaries are downloaded to, created if needed. It lives under the IDE system path,
+     * so it is per IDE version: `%LOCALAPPDATA%\JetBrains\<IDE><version>\ocaml` on windows,
+     * `~/Library/Caches/JetBrains/<IDE><version>/ocaml` on macOS.
+     */
     public static @NotNull File getRincewindDirectory() {
-        File directory = new File(PathManager.getSystemPath(), "reasonml");
+        File directory = new File(PathManager.getSystemPath(), DIRECTORY_NAME);
         if (!directory.exists() && !directory.mkdirs()) {
             LOG.warn("Can't create " + directory + ", falling back to the temp directory");
             return new File(System.getProperty("java.io.tmpdir"));

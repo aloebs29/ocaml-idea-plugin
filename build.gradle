@@ -41,6 +41,26 @@ dependencies {
 group = pluginGroup
 version = pluginVersion + '-' + platformVersion
 
+// Reason, Rescript, BuckleScript and Esy are no longer registered in plugin.xml, so their tests can no
+// longer parse anything - the file types they configure resolve to plain text. The sources and the tests
+// are kept, so that re-registering a language in plugin.xml brings its suite back with it.
+test {
+    exclude 'com/reason/lang/reason/**'
+    exclude 'com/reason/lang/rescript/**'
+    exclude 'com/reason/lang/doc/reason/**'
+    exclude 'com/reason/lang/doc/rescript/**'
+    exclude 'com/reason/comp/bs/**'
+    exclude 'com/reason/comp/esy/**'
+    exclude '**/*_RML_*'
+    exclude '**/*_RES_*'
+    exclude '**/*RMLTest*'
+    exclude '**/*RESTest*'
+    exclude '**/Rml*'
+    exclude '**/Res*'
+    // only has Reason and Rescript cases
+    exclude '**/ORDocumentationProviderTest*'
+}
+
 intellijPlatform {
     pluginConfiguration {
         version = pluginVersion + '-' + platformVersion
@@ -54,12 +74,13 @@ intellijPlatform {
         sinceBuild = pluginSinceBuild
         untilBuild = pluginUntilBuild
         changeNotes = """
+                <p>Personal OCaml-only fork of the ReasonML plugin.</p>
                 <ul>
-                    <li>Fix infinite indexing (parameters)</li>
+                    <li>Reason, Rescript, BuckleScript and Esy support is no longer registered</li>
+                    <li>Opam executable is resolved explicitly and the configured root is honoured</li>
+                    <li>Rincewind binaries live outside the plugin directory and are not re-downloaded when unavailable</li>
+                    <li>Stdlib resolves through Stdlib rather than the removed Pervasives module</li>
                 </ul>
-                <p><a href="https://github.com/giraud/reasonml-idea-plugin/blob/master/CHANGELOG.md">Full change log...</a></p>
-                <p/>
-                <p>To see how to integrate tools, go to the website.</p>
             """.stripIndent()
     }
 

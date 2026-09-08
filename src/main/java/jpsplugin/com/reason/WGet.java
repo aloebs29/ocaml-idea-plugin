@@ -75,7 +75,7 @@ public class WGet {
             }
 
             LOG.info(targetFile.getName() + " downloaded to " + targetFile.toPath().getParent());
-            Notifications.Bus.notify(new ORNotification("Reason", "Downloaded " + targetFile, NotificationType.INFORMATION));
+            Notifications.Bus.notify(new ORNotification("OCaml", "Downloaded " + targetFile, NotificationType.INFORMATION));
 
             return true;
         } catch (IOException e) {
@@ -83,7 +83,7 @@ public class WGet {
             partFile.delete(); // do not leave a truncated download behind
             LOG.info("Can't download " + targetFile, e);
             if (notifyOnError) {
-                Notifications.Bus.notify(new ORNotification("Reason", "Can't download " + targetFile + "\n" + e, NotificationType.ERROR));
+                Notifications.Bus.notify(new ORNotification("OCaml", "Can't download " + targetFile + "\n" + e, NotificationType.ERROR));
             }
             return false;
         }

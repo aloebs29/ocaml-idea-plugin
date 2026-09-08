@@ -35,8 +35,6 @@
          -->
 
         <colorSettingsPage implementation="com.reason.ide.settings.DuneColorSettingsPage"/>
-        <toolWindow id="Esy:" factoryClass="com.reason.ide.console.esy.EsyToolWindowFactory"
-                    anchor="bottom" icon="com.reason.ide.ORIcons.ESY_TOOL"/>
 
     </extensions>
 </idea-plugin>

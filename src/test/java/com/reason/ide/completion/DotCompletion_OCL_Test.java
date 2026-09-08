@@ -73,7 +73,7 @@ public class DotCompletion_OCL_Test extends ORBasePlatformTestCase {
         configureCode("belt_Map.mli", "module String = Belt_MapString");
         configureCode("belt.ml", "module Map = Belt_Map");
 
-        configureCode("Dummy.re", "Belt.Map.String.<caret>");
+        configureCode("Dummy.ml", "Belt.Map.String.<caret>");
 
         myFixture.complete(CompletionType.BASIC, 1);
         List<String> strings = myFixture.getLookupElementStrings();
@@ -138,7 +138,7 @@ public class DotCompletion_OCL_Test extends ORBasePlatformTestCase {
         configureCode("belt_Array.mli", "val length: t -> int");
         configureCode("belt.ml", "module Array = Belt_Array");
 
-        configureCode("Dummy.re", "Belt.Array.<caret>");
+        configureCode("Dummy.ml", "Belt.Array.<caret>");
 
         myFixture.complete(CompletionType.BASIC, 1);
         List<String> strings = myFixture.getLookupElementStrings();

@@ -26,11 +26,6 @@ import java.util.*;
 import static com.intellij.openapi.application.ApplicationManager.getApplication;
 
 public class ORSettingsConfigurable implements SearchableConfigurable, Configurable.NoScroll {
-    @Nls
-    private static final String BS_PLATFORM_LOCATION_LABEL = "Choose bs-platform Directory: ";
-    @Nls
-    private static final String ESY_EXECUTABLE_LABEL = "Choose esy Executable: ";
-
     private final @NotNull Project myProject;
     private ORSettings mySettings;
 
@@ -45,12 +40,6 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
     private JCheckBox f_generalIsFormatOnSave;
     private JCheckBox myUseSuperErrorsCheckBox;
 
-    // BuckleScript
-    private JCheckBox f_bsIsEnabled;
-    private TextFieldWithBrowseButton f_bsPlatformLocation;
-
-    // Esy
-    private TextFieldWithBrowseButton f_esyExecutable;
     private OpamConfigurationTab myOpamConfigurationTab;
 
     public ORSettingsConfigurable(@NotNull Project project) {
@@ -66,13 +55,13 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
     @Nls
     @Override
     public @NotNull String getDisplayName() {
-        return "OCaml(Reason) / Rescript";
+        return "OCaml";
     }
 
     @NotNull
     @Override
     public String getHelpTopic() {
-        return "settings.reason";
+        return "settings.ocaml";
     }
 
     @Nullable
@@ -81,9 +70,7 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         mySettings = myProject.getService(ORSettings.class);
 
         createGeneralTab();
-        createBsTab();
         myOpamConfigurationTab.createComponent(mySettings.getProject(), mySettings.getSwitchName());
-        createEsyTab();
 
         return myRootPanel;
     }
@@ -94,17 +81,12 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         mySettings.setFormatOnSaveEnabled(f_generalIsFormatOnSave.isSelected());
         mySettings.setFormatColumnWidth(sanitizeInput(f_generalFormatWidthColumns.getText()));
         mySettings.setUseSuperErrors(myUseSuperErrorsCheckBox.isSelected());
-        // BuckleScript
-        mySettings.setBsEnabled(f_bsIsEnabled.isSelected());
-        mySettings.setBsPlatformLocation(sanitizeInput(f_bsPlatformLocation));
         // Opam
         mySettings.setOpamExecutable(sanitizeInput(myOpamConfigurationTab.getOpamExecutable()));
         mySettings.setOpamLocation(sanitizeInput(myOpamConfigurationTab.getOpamLocation()));
         mySettings.setCygwinBash(myCygwinBash);
         mySettings.setIsWsl(myIsWsl);
         mySettings.setSwitchName(myOpamConfigurationTab.getSelectedSwitch());
-        // Esy
-        mySettings.setEsyExecutable(sanitizeInput(f_esyExecutable));
 
         // Create external library based on the selected opam switch
         createExternalLibraryDependency(mySettings.getProject(), mySettings.getSwitchName(), mySettings.getOpamLocation());
@@ -177,21 +159,13 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         boolean isFormatWidthColumnsModified =
                 !f_generalFormatWidthColumns.getText().equals(mySettings.getFormatColumnWidth());
         boolean isUseSuperErrorModified = myUseSuperErrorsCheckBox.isSelected() != mySettings.isUseSuperErrors();
-        // Bs
-        boolean isBsEnabledModified = f_bsIsEnabled.isSelected() != mySettings.isBsEnabled();
-        boolean isBsPlatformLocationModified =
-                !f_bsPlatformLocation.getText().equals(mySettings.getBsPlatformLocation());
         // Opam
         boolean isOpamExecutableModified = myOpamConfigurationTab.isOpamExecutableModified(mySettings.getOpamExecutable());
         boolean isOpamLocationModified = myOpamConfigurationTab.isOpamLocationModified(mySettings.getOpamLocation());
         boolean isOpamSwitchModified = myOpamConfigurationTab.isOpamSwitchModified(mySettings.getSwitchName());
-        // Esy
-        boolean isEsyExecutableModified =
-                !f_esyExecutable.getText().equals(mySettings.getEsyExecutable());
 
         return isFormatOnSaveModified || isFormatWidthColumnsModified || isUseSuperErrorModified
-                || isBsEnabledModified || isBsPlatformLocationModified || isOpamExecutableModified || isOpamLocationModified
-                || isOpamSwitchModified || isEsyExecutableModified;
+                || isOpamExecutableModified || isOpamLocationModified || isOpamSwitchModified;
     }
 
     @Override
@@ -200,9 +174,6 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         f_generalIsFormatOnSave.setSelected(mySettings.isFormatOnSaveEnabled());
         f_generalFormatWidthColumns.setText(mySettings.getFormatColumnWidth());
         myUseSuperErrorsCheckBox.setSelected(mySettings.isUseSuperErrors());
-        // BuckleScript
-        f_bsIsEnabled.setSelected(mySettings.isBsEnabled());
-        f_bsPlatformLocation.setText(mySettings.getBsPlatformLocation());
         // Opam
         myCygwinBash = mySettings.getCygwinBash();
         myIsWsl = mySettings.isWsl();
@@ -210,23 +181,9 @@ public class ORSettingsConfigurable implements SearchableConfigurable, Configura
         myOpamConfigurationTab.setOpamLocation(mySettings.getOpamLocation());
         myOpamConfigurationTab.setDetectionText();
         myOpamConfigurationTab.createSwitch(mySettings.getOpamLocation(), mySettings.getSwitchName());
-        // Esy
-        f_esyExecutable.setText(mySettings.getEsyExecutable());
     }
 
     private void createGeneralTab() {
-    }
-
-    private void createBsTab() {
-        Project project = mySettings.getProject();
-        f_bsPlatformLocation.addBrowseFolderListener(BS_PLATFORM_LOCATION_LABEL, null, project,
-                FileChooserDescriptorFactory.createSingleFolderDescriptor());
-    }
-
-    private void createEsyTab() {
-        Project project = mySettings.getProject();
-        f_esyExecutable.addBrowseFolderListener(ESY_EXECUTABLE_LABEL, null, project,
-                FileChooserDescriptorFactory.createSingleFileOrExecutableAppDescriptor());
     }
 
     private static @NotNull String sanitizeInput(@NotNull TextFieldWithBrowseButton textFieldWithBrowseButton) {

@@ -1,44 +1,23 @@
 <idea-plugin>
-    <id>reasonml</id>
-    <name>ReasonML</name>
-    <vendor email="giraud.contact@yahoo.fr" url="https://github.com/giraud/reasonml-idea-plugin">H.Giraud</vendor>
-    <description><![CDATA[Add support for Rescript, ReasonML and OCaml (including Dune).]]></description>
+    <id>com.andrewloebs.ocaml</id>
+    <name>OCaml</name>
+    <vendor email="andrew.loebs@gmail.com">Andrew Loebs</vendor>
+    <description><![CDATA[OCaml language support, including Dune and opam.<br/>
+        A personal fork of <a href="https://github.com/giraud/reasonml-idea-plugin">reasonml-idea-plugin</a>,
+        narrowed to OCaml only: Reason, Rescript, BuckleScript and Esy are no longer registered.]]></description>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.lang</depends>
     <depends optional="true" config-file="java-deps.xml">com.intellij.modules.java</depends>
-    <depends optional="true" config-file="js-deps.xml">JavaScript</depends>
 
     <actions>
-        <!-- CONSOLE ACTIONS - BUCKLESCRIPT -->
-        <!--suppress PluginXmlCapitalization -->
-        <action id="bs.actions.make" class="com.reason.ide.console.bs.BsMakeAction" text="Bsb -make"/>
-        <!--suppress PluginXmlCapitalization -->
-        <action id="bs.actions.makeWorld" class="com.reason.ide.console.bs.BsMakeWorldAction"
-                text="Bsb -clean-world -make-world"/>
-
         <!-- CONSOLE ACTIONS - DUNE -->
         <!--suppress PluginXmlCapitalization -->
         <action id="dune.actions.build" class="com.reason.ide.console.dune.DuneBuildAction" text="Dune build"/>
         <!--suppress PluginXmlCapitalization -->
         <action id="dune.actions.clean" class="com.reason.ide.console.dune.DuneCleanAction" text="Dune clean"/>
 
-        <!-- CONSOLE ACTIONS - ESY -->
-        <!--suppress PluginXmlCapitalization -->
-        <action id="esy.actions.build" class="com.reason.ide.console.esy.EsyBuildAction" text="Esy build"/>
-
-        <!--suppress PluginXmlCapitalization -->
-        <action id="reason.actions.convert" class="com.reason.ide.actions.ConvertAction"
-                text="Convert Reason-OCaml" description="Convert between Reason and OCaml code">
-            <add-to-group group-id="EditMenu" anchor="last"/>
-        </action>
-        <!--suppress PluginXmlCapitalization -->
-        <action id="reason.actions.transform" class="com.reason.ide.actions.TransformAction"
-                text="Convert Reason-OCaml (new file)"
-                description="Convert between Reason and OCaml code in a new file">
-            <add-to-group group-id="EditMenu" anchor="last"/>
-        </action>
         <action id="reason.actions.testData.Navigate" class="com.reason.ide.testAssistant.GotoTestDataAction"
                 text="Navigate to Testdata" use-shortcut-of="GotoTest">
         </action>
@@ -63,17 +42,6 @@
          | File types
          -->
 
-        <!-- Reason -->
-        <fileType extensions="rei" name="REASON_INTF" fieldName="INSTANCE" language="Reason"
-                  implementationClass="com.reason.ide.files.RmlInterfaceFileType"/>
-        <fileType extensions="re" name="REASON" fieldName="INSTANCE" language="Reason"
-                  implementationClass="com.reason.ide.files.RmlFileType"/>
-        <!-- Rescript -->
-        <fileType extensions="resi" name="RESCRIPT_INTF" fieldName="INSTANCE" language="Rescript"
-                  implementationClass="com.reason.ide.files.ResInterfaceFileType"/>
-        <!-- Can't use extension, use isMyFileType function instead -->
-        <fileType name="RESCRIPT" fieldName="INSTANCE" language="Rescript"
-                  implementationClass="com.reason.ide.files.ResFileType"/>
         <!-- OCaml -->
         <fileType extensions="mli" name="OCAML_INTF" fieldName="INSTANCE" language="OCaml"
                   implementationClass="com.reason.ide.files.OclInterfaceFileType"/>
@@ -91,10 +59,6 @@
         <!-- OCaml - Yacc -->
         <fileType extensions="mly" name="MlY" fieldName="INSTANCE" language="Mly"
                   implementationClass="com.reason.ide.files.MlyFileType"/>
-        <!-- Configuration files -->
-        <fileType name="Compiler configuration" fieldName="INSTANCE" language="JSON"
-                  fileNames="bsconfig.json;rescript.json"
-                  implementationClass="com.reason.ide.files.ORConfigJsonFileType"/>
         <!-- Dune -->
         <fileType name="DUNE" fieldName="INSTANCE" language="Dune"
                   fileNames="dune;dune-project;jbuild"
@@ -108,31 +72,20 @@
          -->
 
         <fileEditorProvider implementation="com.reason.ide.editors.CmtFileEditorProvider"/>
-        <internalFileTemplate name="Rescript Module"/>
         <!-- https://github.com/giraud/reasonml-idea-plugin/issues/247 -->
         <!-- internalFileTemplate name="OCaml Interface" -->
         <!-- internalFileTemplate name="OCaml Module" -->
-        <!-- internalFileTemplate name="Reason Interface" -->
-        <!-- internalFileTemplate name="Reason Module" -->
 
         <!--
          | Parsers
          -->
 
-        <!-- Reason -->
+        <!-- Reason and Rescript are not registered as languages any more, but their stub element types
+             must still be created before index initialization completes: the shared stub machinery in
+             lang.core touches them, and creating them lazily afterwards trips a platform assertion. -->
         <stubElementTypeHolder externalIdPrefix="Reason." class="com.reason.lang.core.stub.RmlStubBasedElementTypes"/>
-        <lang.ast.factory language="Reason" implementationClass="com.reason.lang.reason.RmlASTFactory"/>
-        <lang.parserDefinition language="Reason" implementationClass="com.reason.lang.reason.RmlSafeParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="Reason"
-                                       implementationClass="com.reason.ide.highlight.RmlSyntaxHighlighterFactory"/>
-        <!-- Rescript -->
         <stubElementTypeHolder externalIdPrefix="Rescript."
                                class="com.reason.lang.core.stub.ResStubBasedElementTypes"/>
-        <lang.ast.factory language="Rescript" implementationClass="com.reason.lang.rescript.ResASTFactory"/>
-        <lang.parserDefinition language="Rescript"
-                               implementationClass="com.reason.lang.rescript.ResSafeParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="Rescript"
-                                       implementationClass="com.reason.ide.highlight.ResSyntaxHighlighterFactory"/>
         <!-- OCaml -->
         <stubElementTypeHolder externalIdPrefix="OCaml." class="com.reason.lang.core.stub.OclStubBasedElementTypes"/>
         <lang.ast.factory language="OCaml" implementationClass="com.reason.lang.ocaml.OclASTFactory"/>
@@ -172,10 +125,6 @@
          | Structure / folding / comments
          -->
 
-        <lang.psiStructureViewFactory language="Reason"
-                                      implementationClass="com.reason.ide.structure.StructureViewFactory"/>
-        <lang.psiStructureViewFactory language="Rescript"
-                                      implementationClass="com.reason.ide.structure.StructureViewFactory"/>
         <lang.psiStructureViewFactory language="OCaml"
                                       implementationClass="com.reason.ide.structure.StructureViewFactory"/>
         <lang.psiStructureViewFactory language="OCamlP4"
@@ -189,8 +138,6 @@
         <lang.psiStructureViewFactory language="Dune"
                                       implementationClass="com.reason.ide.structure.StructureViewFactory"/>
 
-        <lang.foldingBuilder language="Reason" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
-        <lang.foldingBuilder language="Rescript" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
         <lang.foldingBuilder language="OCaml" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
         <lang.foldingBuilder language="OCamlP4" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
         <lang.foldingBuilder language="Mlg" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
@@ -198,8 +145,6 @@
         <lang.foldingBuilder language="Mly" implementationClass="com.reason.ide.folding.ORFoldingBuilder"/>
         <lang.foldingBuilder language="Dune" implementationClass="com.reason.ide.folding.DuneFoldingBuilder"/>
 
-        <lang.commenter language="Reason" implementationClass="com.reason.ide.comment.RmlCommenter"/>
-        <lang.commenter language="Rescript" implementationClass="com.reason.ide.comment.RmlCommenter"/>
         <lang.commenter language="OCaml" implementationClass="com.reason.ide.comment.OclCommenter"/>
         <lang.commenter language="OCamlP4" implementationClass="com.reason.ide.comment.OclCommenter"/>
         <lang.commenter language="Mlg" implementationClass="com.reason.ide.comment.OclCommenter"/>
@@ -207,8 +152,6 @@
         <lang.commenter language="Mly" implementationClass="com.reason.ide.comment.MlyCommenter"/>
         <lang.commenter language="Dune" implementationClass="com.reason.ide.comment.DuneCommenter"/>
 
-        <lang.braceMatcher language="Reason" implementationClass="com.reason.ide.match.RmlPairedBraceMatcher"/>
-        <lang.braceMatcher language="Rescript" implementationClass="com.reason.ide.match.ResPairedBraceMatcher"/>
         <lang.braceMatcher language="OCaml" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="OCamlP4" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="Mlg" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
@@ -220,10 +163,6 @@
          | Doc
          -->
 
-        <lang.documentationProvider language="Reason"
-                                    implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-        <lang.documentationProvider language="Rescript"
-                                    implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
         <lang.documentationProvider language="OCaml" implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
         <lang.documentationProvider language="OCamlP4"
                                     implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
@@ -260,9 +199,6 @@
         <fileBasedIndex implementation="com.reason.ide.search.index.FileModuleIndex"/>
         <fileBasedIndex implementation="com.reason.ide.search.index.NamespaceIndex"/>
 
-        <lang.findUsagesProvider language="Reason" implementationClass="com.reason.ide.search.RmlFindUsagesProvider"/>
-        <lang.findUsagesProvider language="Rescript"
-                                 implementationClass="com.reason.ide.search.ResFindUsagesProvider"/>
         <lang.findUsagesProvider language="OCaml" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
         <lang.findUsagesProvider language="OCamlP4" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
         <lang.findUsagesProvider language="Mlg" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
@@ -275,11 +211,6 @@
         <definitionsScopedSearch implementation="com.reason.ide.search.ORImplementationSearch"/>
 
         <targetElementEvaluator language="OCaml" implementationClass="com.reason.ide.files.ORTargetElementEvaluator"/>
-        <!-- Navigate to make function if top level module is a component -->
-        <targetElementEvaluator language="Reason"
-                                implementationClass="com.reason.ide.files.ORTargetElementEvaluator"/>
-        <targetElementEvaluator language="Rescript"
-                                implementationClass="com.reason.ide.files.ORTargetElementEvaluator"/>
 
         <!--
          | SDK / Libs / Settings
@@ -293,7 +224,7 @@
         <additionalLibraryRootsProvider implementation="com.reason.ide.library.OclLibraryRootProvider"/>
 
         <projectService serviceImplementation="com.reason.ide.settings.ORSettings"/>
-        <projectConfigurable id="settings.reason" groupId="language" displayName="OCaml(Reason) / Rescript"
+        <projectConfigurable id="settings.ocaml" groupId="language" displayName="OCaml"
                              instance="com.reason.ide.settings.ORSettingsConfigurable"/>
 
         <projectSdkSetupValidator implementation="com.reason.ide.library.OclSdkSetupValidator"/>
@@ -302,7 +233,6 @@
          | Insight
          -->
 
-        <!--<codeInsight.parameterNameHints language="Reason" implementationClass="SignatureProvider"/>-->
         <editor.linePainter implementation="com.reason.ide.hints.OREditorLinePainter"/>
 
         <!--
@@ -312,42 +242,22 @@
         <postFormatProcessor implementation="com.reason.ide.format.ORPostFormatProcessor"/>
 
         <typedHandler implementation="com.reason.ide.handlers.ORTypedHandler" id="RmlTypedHandler"/>
-        <quoteHandler fileType="RESCRIPT" className="com.reason.ide.handlers.ResQuoteHandler"/>
-        <quoteHandler fileType="RESCRIPT_INTF" className="com.reason.ide.handlers.ResQuoteHandler"/>
-        <quoteHandler fileType="REASON" className="com.reason.ide.handlers.RmlQuoteHandler"/>
-        <quoteHandler fileType="REASON_INTF" className="com.reason.ide.handlers.RmlQuoteHandler"/>
         <quoteHandler fileType="OCAML" className="com.reason.ide.handlers.OclQuoteHandler"/>
         <quoteHandler fileType="OCAML_INTF" className="com.reason.ide.handlers.OclQuoteHandler"/>
 
         <lang.refactoringSupport language="OCaml"
-                                 implementationClass="com.reason.ide.refactor.ORRefactoringSupportProvider"/>
-        <lang.refactoringSupport language="Reason"
-                                 implementationClass="com.reason.ide.refactor.ORRefactoringSupportProvider"/>
-        <lang.refactoringSupport language="Rescript"
                                  implementationClass="com.reason.ide.refactor.ORRefactoringSupportProvider"/>
 
         <iconProvider implementation="com.reason.ide.IconProvider"/>
 
         <colorSettingsPage implementation="com.reason.ide.settings.ORColorSettingsPage"/>
 
-        <annotator language="Reason" implementationClass="com.reason.ide.highlight.RmlSyntaxAnnotator"/>
-        <annotator language="Rescript" implementationClass="com.reason.ide.highlight.ResSyntaxAnnotator"/>
         <annotator language="OCaml" implementationClass="com.reason.ide.highlight.OclSyntaxAnnotator"/>
         <annotator language="Dune" implementationClass="com.reason.ide.highlight.DuneSyntaxAnnotator"/>
 
-        <externalAnnotator language="Reason" implementationClass="com.reason.ide.annotations.ORErrorAnnotator"/>
-        <externalAnnotator language="Rescript" implementationClass="com.reason.ide.annotations.ORErrorAnnotator"/>
         <externalAnnotator language="OCaml" implementationClass="com.reason.ide.annotations.ORErrorAnnotator"/>
         <problemFileHighlightFilter implementation="com.reason.ide.annotations.ErrorFileHighlighter"/>
 
-        <completion.contributor language="Reason"
-                                implementationClass="com.reason.ide.insight.RmlCompletionContributor"/>
-        <completion.contributor language="Reason"
-                                implementationClass="com.reason.ide.insight.RmlKeywordCompletionContributor"/>
-        <completion.contributor language="Rescript"
-                                implementationClass="com.reason.ide.insight.ResCompletionContributor"/>
-        <completion.contributor language="Rescript"
-                                implementationClass="com.reason.ide.insight.ResKeywordCompletionContributor"/>
         <completion.contributor language="OCaml"
                                 implementationClass="com.reason.ide.insight.OclCompletionContributor"/>
         <completion.contributor language="OCaml"
@@ -357,21 +267,12 @@
         <completion.contributor language="Mly"
                                 implementationClass="com.reason.ide.insight.OclKeywordCompletionContributor"/>
 
-        <languageInjector implementation="com.reason.ide.js.JsInjector"/>
         <lang.elementManipulator forClass="com.reason.lang.core.psi.impl.RPsiLiteralString"
                                  implementationClass="com.reason.lang.core.LiteralStringManipulator"/>
 
         <!--
          | Templates
          -->
-
-        <liveTemplateContext contextId="REASON_CODE"
-                             implementation="com.reason.ide.template.RmlBaseLiveTemplateContextType"/>
-        <defaultLiveTemplates file="liveTemplates/Reason.xml"/>
-
-        <liveTemplateContext contextId="RESCRIPT_CODE"
-                             implementation="com.reason.ide.template.ResBaseLiveTemplateContextType"/>
-        <defaultLiveTemplates file="liveTemplates/Rescript.xml"/>
 
         <liveTemplateContext contextId="OCAML"
                              implementation="com.reason.ide.template.OCamlBaseLiveTemplateContextType"/>
@@ -398,27 +299,14 @@
 
         <spellchecker.support language="OCaml"
                               implementationClass="com.reason.ide.spellcheckers.OclSpellCheckerStrategy"/>
-        <spellchecker.support language="Reason"
-                              implementationClass="com.reason.ide.spellcheckers.RmlSpellCheckerStrategy"/>
-        <spellchecker.support language="Rescript"
-                              implementationClass="com.reason.ide.spellcheckers.ResSpellCheckerStrategy"/>
 
         <!--
          | UI
          -->
 
-        <toolWindow id="BuckleScript:" factoryClass="com.reason.ide.console.bs.BsToolWindowFactory"
-                    anchor="bottom" icon="com.reason.ide.ORIcons.BUCKLESCRIPT_TOOL"/>
-        <toolWindow id="Rescript:" factoryClass="com.reason.ide.console.rescript.RescriptToolWindowFactory"
-                    anchor="bottom" icon="com.reason.ide.ORIcons.RESCRIPT_TOOL"/>
         <toolWindow id="Dune:" factoryClass="com.reason.ide.console.dune.DuneToolWindowFactory"
                     anchor="bottom" icon="com.reason.ide.ORIcons.DUNE_TOOL"/>
 
-        <!-- <codeInsight.typeInfo language="Reason" implementationClass="com.reason.ide.hints.RmlTypeProvider"/> ctrl-shift-p -->
-        <codeInsight.parameterInfo language="Reason"
-                                   implementationClass="com.reason.ide.hints.RmlParameterInfoHandler"/>
-        <codeInsight.parameterInfo language="Rescript"
-                                   implementationClass="com.reason.ide.hints.ResParameterInfoHandler"/>
         <codeInsight.parameterInfo language="OCaml"
                                    implementationClass="com.reason.ide.hints.OclParameterInfoHandler"/>
 
@@ -430,10 +318,6 @@
         <!-- Gutter icons -->
 
         <codeInsight.lineMarkerProvider language="OCaml"
-                                        implementationClass="com.reason.ide.go.ORLineMarkerProvider"/>
-        <codeInsight.lineMarkerProvider language="Reason"
-                                        implementationClass="com.reason.ide.go.ORLineMarkerProvider"/>
-        <codeInsight.lineMarkerProvider language="Rescript"
                                         implementationClass="com.reason.ide.go.ORLineMarkerProvider"/>
     </extensions>
 

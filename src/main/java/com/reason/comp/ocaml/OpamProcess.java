@@ -60,7 +60,7 @@ public final class OpamProcess {
 
     private static @NotNull String withHint(@Nullable String message) {
         return (message == null ? "" : message)
-                + "\nSet the opam executable explicitly in Settings | Languages & Frameworks | OCaml(Reason) / Rescript | Opam.";
+                + "\nSet the opam executable explicitly in Settings | Languages & Frameworks | OCaml | Opam.";
     }
 
     public void list(@Nullable String opamExecutable, @NotNull String opamLocation, @NotNull String version, @Nullable String cygwinBash, @NotNull ORProcessTerminated<List<String[]>> onProcessTerminated) {

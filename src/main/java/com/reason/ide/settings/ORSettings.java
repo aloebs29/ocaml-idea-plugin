@@ -4,8 +4,8 @@ import com.intellij.openapi.components.*;
 import com.intellij.openapi.project.*;
 import org.jetbrains.annotations.*;
 
-@State(name = "ReasonSettings", storages = {@Storage("reason.xml")})
-public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSettingsState> {
+@State(name = "OCamlSettings", storages = {@Storage("ocaml.xml")})
+public class ORSettings implements PersistentStateComponent<ORSettings.OCamlSettingsState> {
     private static final boolean IS_FORMAT_ON_SAVE_DEFAULT = true;
     private static final String FORMAT_WIDTH_COLUMNS_DEFAULT = "80";
     private static final boolean IS_BS_ENABLED_DEFAULT = true;
@@ -36,8 +36,8 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
     }
 
     @Override
-    public @NotNull ReasonSettingsState getState() {
-        ReasonSettingsState state = new ReasonSettingsState();
+    public @NotNull OCamlSettingsState getState() {
+        OCamlSettingsState state = new OCamlSettingsState();
         state.isFormatOnSaveEnabled = m_isFormatOnSaveEnabled;
         state.formatColumnWidth = m_formatColumnWidth;
         state.isUseSuperErrors = myUseSuperErrors;
@@ -53,7 +53,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
     }
 
     @Override
-    public void loadState(@NotNull ReasonSettingsState state) {
+    public void loadState(@NotNull OCamlSettingsState state) {
         m_isFormatOnSaveEnabled = state.isFormatOnSaveEnabled;
         m_formatColumnWidth = state.formatColumnWidth;
         myUseSuperErrors = state.isUseSuperErrors;
@@ -167,7 +167,7 @@ public class ORSettings implements PersistentStateComponent<ORSettings.ReasonSet
     }
 
     @SuppressWarnings("WeakerAccess")
-    public static class ReasonSettingsState {
+    public static class OCamlSettingsState {
         // General
         public boolean isFormatOnSaveEnabled = IS_FORMAT_ON_SAVE_DEFAULT;
         public @Nullable String formatColumnWidth;

@@ -9,20 +9,20 @@ import javax.swing.*;
 import static com.intellij.notification.NotificationType.*;
 
 public final class ORNotification extends Notification {
-    private static final String REASON_ML_GROUP_DISPLAY = "Reason";
+    private static final String NOTIFICATION_GROUP = "OCaml";
 
     public static void notifyError(@NotNull String title, @Nullable String subtitle, @NotNull String content) {
         Notifications.Bus.notify(new ORNotification(title, subtitle, content, ERROR));
     }
 
     public ORNotification(@NotNull String title, @Nullable String subtitle, @NotNull String content, @NotNull NotificationType type) {
-        super(REASON_ML_GROUP_DISPLAY, title, content, type);
+        super(NOTIFICATION_GROUP, title, content, type);
         setIcon(getIcon(type));
         setSubtitle(subtitle);
     }
 
     public ORNotification(@NotNull String title, @NotNull String content, @NotNull NotificationType type) {
-        super(REASON_ML_GROUP_DISPLAY, title, content, type);
+        super(NOTIFICATION_GROUP, title, content, type);
         setIcon(getIcon(type));
     }
 
