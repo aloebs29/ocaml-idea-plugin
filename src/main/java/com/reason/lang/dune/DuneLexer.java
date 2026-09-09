@@ -616,7 +616,7 @@ public class DuneLexer implements FlexLexer {
             // fall through
           case 44: break;
           case 19:
-            { yybegin(INITIAL); tokenEnd(); return types.SINGLE_COMMENT;
+            { yybegin(INITIAL); yypushback(yylength()); tokenEnd(); return types.SINGLE_COMMENT;
             }
             // fall through
           case 45: break;

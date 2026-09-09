@@ -107,7 +107,9 @@ ATOM=[A-Za-z_0-9'@&\^!\.\-/+\\]
 
 <IN_SL_COMMENT> {
     .         {}
-    {NEWLINE} { yybegin(INITIAL); tokenEnd(); return types.SINGLE_COMMENT; }
+    // the newline is pushed back so that it is lexed as whitespace: a comment token that swallowed its own
+    // line break would leave the formatter with nothing to re-indent on the line after a comment
+    {NEWLINE} { yybegin(INITIAL); yypushback(yylength()); tokenEnd(); return types.SINGLE_COMMENT; }
     <<EOF>>   { yybegin(INITIAL); tokenEnd(); return types.SINGLE_COMMENT; }
 }
 

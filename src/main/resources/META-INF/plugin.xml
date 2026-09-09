@@ -155,6 +155,10 @@
         <!-- indentation on enter, delegated to ocp-indent from the opam switch -->
         <lineIndentProvider implementation="com.reason.ide.format.OclLineIndentProvider"/>
 
+        <!-- dune files are s-expressions, so indentation is computed from the parse tree, no external tool -->
+        <lang.formatter language="Dune" implementationClass="com.reason.ide.format.DuneFormattingModelBuilder"/>
+        <langCodeStyleSettingsProvider implementation="com.reason.ide.format.DuneCodeStyleSettingsProvider"/>
+
         <lang.braceMatcher language="OCaml" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="OCamlP4" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
         <lang.braceMatcher language="Mlg" implementationClass="com.reason.ide.match.OclPairedBraceMatcher"/>
