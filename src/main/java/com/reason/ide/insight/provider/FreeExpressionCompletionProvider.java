@@ -201,6 +201,16 @@ public class FreeExpressionCompletionProvider {
     }
 
     private static void addModuleExpressions(@NotNull RPsiModule rootModule, @Nullable ORLanguageProperties language, @NotNull GlobalSearchScope searchScope, @NotNull CompletionResultSet resultSet) {
+        addModuleExpressions(rootModule, language, searchScope, resultSet, new HashSet<>());
+    }
+
+    // Aliases and includes may form cycles (ie, `module List = List`), a module must be expanded only once
+    private static void addModuleExpressions(@NotNull RPsiModule rootModule, @Nullable ORLanguageProperties language, @NotNull GlobalSearchScope searchScope, @NotNull CompletionResultSet resultSet, @NotNull Set<String> visitedModules) {
+        String qualifiedName = rootModule.getQualifiedName();
+        if (!visitedModules.add(qualifiedName == null ? rootModule.toString() : qualifiedName)) {
+            return;
+        }
+
         Project project = rootModule.getProject();
 
         // alternate names (include inside module)
@@ -214,7 +224,7 @@ public class FreeExpressionCompletionProvider {
             }
 
             for (RPsiModule alternateModule : alternateModules) {
-                addModuleExpressions(alternateModule, language, searchScope, resultSet);
+                addModuleExpressions(alternateModule, language, searchScope, resultSet, visitedModules);
             }
         }
 
