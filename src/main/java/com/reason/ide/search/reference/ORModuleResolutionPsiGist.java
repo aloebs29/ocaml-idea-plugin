@@ -39,7 +39,7 @@ import static com.intellij.openapi.application.ApplicationManager.*;
  */
 public class ORModuleResolutionPsiGist {
     private static final Log LOG = Log.create("gist");
-    private static final int VERSION = 3;
+    private static final int VERSION = 4;
     private static final String ID = "reasonML.gist.openIncludeQNames";
     private static final Key<RPsiQualifiedPathElement> RESOLUTION = Key.create(ID);
     private static final Key<String> ELEMENT_INDEX = Key.create("reasonML.gist.elementIndex");

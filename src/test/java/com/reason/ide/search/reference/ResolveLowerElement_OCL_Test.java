@@ -736,4 +736,32 @@ public class ResolveLowerElement_OCL_Test extends ORBasePlatformTestCase {
         PsiElement e = myFixture.getElementAtCaret();
         assertEquals("A.y", ((RPsiType) e).getQualifiedName());
     }
+
+    // A module a library shadows with a `with module X := ...` constraint must not hide the real one.
+    // Base does that for every stdlib module it replaces, and stdio.mli opens Base before aliasing
+    // `module In_channel = In_channel`, so `Stdio.In_channel` used to resolve to the constraint.
+    @Test
+    public void test_module_shadowed_by_a_constraint() {
+        configureCode("Base.ml", """
+                include (
+                  Shadow_stdlib :
+                    module type of struct
+                      include Shadow_stdlib
+                    end
+                    with module In_channel := Shadow_stdlib.In_channel)
+                """);
+        configureCode("In_channel.mli", """
+                type t
+                val input_line : t -> string option
+                """);
+        configureCode("Stdio.mli", """
+                open! Base
+                module In_channel = In_channel
+                """);
+        configureCode("Main.ml", "open Stdio\nlet _ = In_channel.input_line<caret>");
+
+        RPsiVal e = (RPsiVal) myFixture.getElementAtCaret();
+        assertEquals("In_channel.input_line", e.getQualifiedName());
+        assertEquals("In_channel.mli", e.getContainingFile().getName());
+    }
 }

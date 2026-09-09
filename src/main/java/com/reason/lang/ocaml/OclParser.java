@@ -540,7 +540,12 @@ public class OclParser extends CommonPsiParser {
         }
 
         private void parseWith() {
-            if (in(myTypes.C_FUNCTOR_RESULT)) { // A functor with constraints
+            if (in(myTypes.C_TYPE_CONSTRAINT) && (lookAhead(1) == myTypes.TYPE || lookAhead(1) == myTypes.MODULE)) {
+                // Constraints can be chained with 'and' or by repeating 'with', they are siblings either way
+                //  include S with type t = x |>with<| module M := N
+                popEndUntil(myTypes.C_TYPE_CONSTRAINT).popEnd().advance()
+                        .mark(myTypes.C_TYPE_CONSTRAINT);
+            } else if (in(myTypes.C_FUNCTOR_RESULT)) { // A functor with constraints
                 //  module Make (M : Input) : S |>with<| ...
                 popEndUntil(myTypes.C_FUNCTOR_RESULT).popEnd().advance()
                         .mark(myTypes.C_CONSTRAINTS)
@@ -880,6 +885,9 @@ public class OclParser extends CommonPsiParser {
                 }
             } else if (in(myTypes.C_FUNCTOR_RESULT)) {
                 popEndUntil(myTypes.C_FUNCTOR_RESULT).popEnd();
+            } else if (is(myTypes.C_TYPE_CONSTRAINT)) {
+                // with module M |>=<| N  - still inside the constraint, a type constraint would have been
+                // caught by the type declaration branch above
             } else if (in(myTypes.C_CONSTRAINTS)) {
                 popEndUntil(myTypes.C_CONSTRAINTS).popEnd();
             }
@@ -1490,6 +1498,12 @@ public class OclParser extends CommonPsiParser {
                 updateComposite(myTypes.C_FIRST_CLASS);
             } else if (is(myTypes.C_LET_DECLARATION)) {
                 updateComposite(myTypes.C_MODULE_DECLARATION);
+            } else if (in(myTypes.C_TYPE_CONSTRAINT)) {
+                // A constraint, not a definition:  include S with |>module<| M := N
+                // No module declaration is marked: it would be stubbed, and would then be indexed as a
+                // module of the enclosing file. Base does that for every module it shadows, which made
+                // `Base.Array`, `Base.In_channel`, ... resolve to an empty constraint instead of the
+                // real top level module.
             } else if (is(myTypes.C_INCLUDE)) {
                 mark(myTypes.C_MODULE_DECLARATION);
             } else if (!is(myTypes.C_MACRO_NAME) && !is(myTypes.C_MODULE_SIGNATURE)) {

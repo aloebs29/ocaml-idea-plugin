@@ -10,7 +10,7 @@ public class ORStubVersions {
     public static final int LET = 17;
     public static final int EXCEPTION = 8;
     public static final int EXTERNAL = 10;
-    public static final int MODULE = 28;
+    public static final int MODULE = 29;
     public static final int OBJECT_FIELD = 3;
     public static final int OPEN = 3;
     public static final int PARAMETER = 7;
@@ -19,7 +19,7 @@ public class ORStubVersions {
     public static final int VAL = 13;
     public static final int VARIANT = 9;
 
-    public static final int OCL_FILE = 10;
+    public static final int OCL_FILE = 11;
     public static final int RES_FILE = 10;
     public static final int RML_FILE = 10;
 }

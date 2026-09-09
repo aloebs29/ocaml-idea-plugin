@@ -29,6 +29,19 @@ class DocFormatter {
 
             HtmlBuilder definitionBuilder = new HtmlBuilder();
 
+            if (element == file) {
+                // Documenting the file itself, ie the module it defines. Its path is empty and its name is
+                // a filename, so neither the qualified path nor the PsiNamedElement rendering below apply.
+                definitionBuilder.append(HtmlChunk.text("module " + source.getModuleName()).bold());
+
+                HtmlBuilder fileBuilder = new HtmlBuilder();
+                fileBuilder.append(definitionBuilder.wrapWith(DocumentationMarkup.DEFINITION_ELEMENT));
+                fileBuilder.append(new HtmlBuilder()
+                        .append(newConverter(source).convert(element, text))
+                        .wrapWith(DocumentationMarkup.CONTENT_ELEMENT));
+                return fileBuilder.toString();
+            }
+
             String path = source.getModuleName();
             if (element instanceof RPsiQualifiedPathElement) {
                 path = Joiner.join(".", ((RPsiQualifiedPathElement) element).getPath());
@@ -55,10 +68,7 @@ class DocFormatter {
             // Content
 
             HtmlBuilder contentBuilder = new HtmlBuilder();
-            FileType fileType = source.getFileType();
-            boolean isReasonLikeComment = FileHelper.isReason(fileType) || FileHelper.isRescript(fileType);
-            ORDocConverter converter = isReasonLikeComment ? new RmlDocConverter() : new OclDocConverter();
-            contentBuilder.append(converter.convert(element, text));
+            contentBuilder.append(newConverter(source).convert(element, text));
 
             // final render
 
@@ -75,6 +85,12 @@ class DocFormatter {
         return text;
     }
 
+
+    private static @NotNull ORDocConverter newConverter(@NotNull FileBase source) {
+        FileType fileType = source.getFileType();
+        boolean isReasonLikeComment = FileHelper.isReason(fileType) || FileHelper.isRescript(fileType);
+        return isReasonLikeComment ? new RmlDocConverter() : new OclDocConverter();
+    }
 
     static @NotNull String escapeCodeForHtml(@Nullable PsiElement code) {
         if (code == null) {

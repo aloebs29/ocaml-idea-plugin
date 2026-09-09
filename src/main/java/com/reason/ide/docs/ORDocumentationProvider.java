@@ -4,9 +4,11 @@ import com.intellij.lang.*;
 import com.intellij.lang.documentation.*;
 import com.intellij.openapi.editor.*;
 import com.intellij.openapi.project.*;
+import com.intellij.openapi.vfs.*;
 import com.intellij.psi.*;
 import com.intellij.psi.search.*;
 import com.intellij.psi.util.*;
+import com.reason.*;
 import com.reason.ide.files.*;
 import com.reason.ide.hints.*;
 import com.reason.ide.search.*;
@@ -40,23 +42,10 @@ public class ORDocumentationProvider extends AbstractDocumentationProvider {
             if (make != null) {
                 docElement = make;
             }
-        } else if (resolvedElement instanceof FileBase) {
-            PsiElement child = resolvedElement.getFirstChild();
-            String text = "";
-
-            PsiElement nextSibling = child;
-            while (nextSibling instanceof PsiComment) {
-                if (isSpecialComment(nextSibling)) {
-                    text = nextSibling.getText();
-                    nextSibling = null;
-                } else {
-                    // Not a special comment, try with next child until no more comments found
-                    nextSibling = PsiTreeUtil.nextVisibleLeaf(nextSibling);
-                }
-            }
-
-            if (!text.isEmpty()) {
-                return DocFormatter.format((PsiFile) resolvedElement, resolvedElement, languageProperties, text);
+        } else if (resolvedElement instanceof FileBase resolvedFile) {
+            String fileDoc = generateFileDoc(resolvedFile, languageProperties);
+            if (fileDoc != null) {
+                return fileDoc;
             }
         }
 
@@ -75,6 +64,25 @@ public class ORDocumentationProvider extends AbstractDocumentationProvider {
         }
 
         PsiElement comment = findComment(docElement, docElement.getLanguage());
+
+        // Nothing found, and it's a module alias: document whatever it is an alias of.
+        // `Stdio.In_channel` is declared as `module In_channel = In_channel`, all of its documentation
+        // lives in the in_channel.mli it points to.
+        if (comment == null && docElement instanceof RPsiInnerModule aliasModule) {
+            PsiElement aliased = resolveModuleAlias(aliasModule);
+            if (aliased instanceof FileBase aliasedFile) {
+                String fileDoc = generateFileDoc(aliasedFile, languageProperties);
+                if (fileDoc != null) {
+                    return fileDoc;
+                }
+            } else if (aliased != null) {
+                PsiElement aliasedComment = findComment(aliased, aliased.getLanguage());
+                if (aliasedComment != null) {
+                    docElement = aliased;
+                    comment = aliasedComment;
+                }
+            }
+        }
 
         // Nothing found, try to find a comment in the interface if any
         if (comment == null && originalElement instanceof RPsiLowerSymbol && docElement instanceof RPsiQualifiedPathElement) {
@@ -216,6 +224,107 @@ public class ORDocumentationProvider extends AbstractDocumentationProvider {
         }
 
         return null;
+    }
+
+    /** The leading doc comment of a file, which is the documentation of the module it defines. */
+    private @Nullable String generateFileDoc(@NotNull FileBase file, @Nullable ORLanguageProperties languageProperties) {
+        String text = "";
+
+        PsiElement nextSibling = file.getFirstChild();
+        while (nextSibling instanceof PsiComment) {
+            if (isSpecialComment(nextSibling)) {
+                text = nextSibling.getText();
+                nextSibling = null;
+            } else {
+                // Not a special comment, try with next child until no more comments found
+                nextSibling = PsiTreeUtil.nextVisibleLeaf(nextSibling);
+            }
+        }
+
+        return text.isEmpty() ? null : DocFormatter.format(file, file, languageProperties, text);
+    }
+
+    /**
+     * Follows a chain of module aliases - `module A = B` - down to whatever it ends on, a file or an
+     * inner module. Returns null if the module is not an alias, or if the chain can't be resolved.
+     */
+    private @Nullable PsiElement resolveModuleAlias(@NotNull RPsiInnerModule module) {
+        Set<PsiElement> visited = new HashSet<>();
+
+        PsiElement current = module;
+        while (current instanceof RPsiInnerModule inner && inner.getAlias() != null && visited.add(current)) {
+            String alias = inner.getAlias();
+
+            // `module X = X` re-exports the compilation unit X. Several libraries of a switch define the
+            // same module name, and stdlib is implicitly opened everywhere, so the reference below can
+            // resolve to a namesake from anywhere - or to the alias itself. A file sitting next to the
+            // alias is unambiguously the one it re-exports.
+            FileBase sibling = findAliasedFile(alias, module, true);
+            if (sibling != null) {
+                return sibling;
+            }
+
+            RPsiUpperSymbol aliasSymbol = inner.getAliasSymbol();
+            PsiReference reference = aliasSymbol == null ? null : aliasSymbol.getReference();
+            PsiElement resolved = reference == null ? null : reference.resolve();
+
+            if (resolved == null || visited.contains(resolved)) {
+                // The chain ends on itself, look the file up by name rather than giving up
+                return findAliasedFile(alias, module, false);
+            }
+
+            current = resolved;
+        }
+
+        return current == module ? null : current;
+    }
+
+    /**
+     * The file module an alias points to, the closest one to the alias when several files define it.
+     * Only an unqualified alias can name a sibling: in `module X = A.B`, `B` is a module of `A`, not a
+     * file that happens to be called B.
+     */
+    private @Nullable FileBase findAliasedFile(@NotNull String alias, @NotNull PsiElement context, boolean siblingOnly) {
+        int lastDot = alias.lastIndexOf('.');
+        if (alias.isEmpty() || (siblingOnly && lastDot != -1)) {
+            return null;
+        }
+
+        Project project = context.getProject();
+        PsiFile contextFile = context.getContainingFile();
+        VirtualFile contextVFile = contextFile == null ? null : contextFile.getVirtualFile();
+        VirtualFile contextDirectory = contextVFile == null ? null : contextVFile.getParent();
+        if (siblingOnly && contextDirectory == null) {
+            return null;
+        }
+
+        PsiManager psiManager = PsiManager.getInstance(project);
+        FileBase found = null;
+        for (VirtualFile candidate : FileModuleIndex.getContainingFiles(alias.substring(lastDot + 1), GlobalSearchScope.allScope(project))) {
+            boolean isSibling = contextDirectory != null && contextDirectory.equals(candidate.getParent());
+            if (siblingOnly && !isSibling) {
+                continue;
+            }
+            if (!(psiManager.findFile(candidate) instanceof FileBase candidateFile) || candidateFile == contextFile) {
+                continue;
+            }
+            if (found == null || isBetterAliasTarget(candidate, found.getVirtualFile(), contextDirectory)) {
+                found = candidateFile;
+            }
+        }
+
+        return found;
+    }
+
+    private static boolean isBetterAliasTarget(@NotNull VirtualFile candidate, @Nullable VirtualFile current, @Nullable VirtualFile contextDirectory) {
+        boolean candidateIsSibling = contextDirectory != null && contextDirectory.equals(candidate.getParent());
+        boolean currentIsSibling = current != null && contextDirectory != null && contextDirectory.equals(current.getParent());
+        if (candidateIsSibling != currentIsSibling) {
+            return candidateIsSibling;
+        }
+        // Same locality, prefer the interface: that is where the documentation is written
+        return FileHelper.isInterface(candidate.getFileType())
+                && (current == null || !FileHelper.isInterface(current.getFileType()));
     }
 
     private @Nullable PsiElement findComment(@Nullable PsiElement resolvedElement, @NotNull Language lang) {

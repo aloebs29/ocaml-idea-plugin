@@ -64,6 +64,24 @@ public class FunctorParsingTest extends OclParsingTestCase {
     }
 
     @Test
+    public void test_with_chained_constraints() {
+        // base's comparator.mli, repeating 'with' rather than chaining with 'and'
+        RPsiFunctor e = firstOfType(parseCode("""
+                module S_to_S1 (S : S) :
+                  S1 with type 'a t = S.t with type comparator_witness = S.comparator_witness
+                """), RPsiFunctor.class);
+
+        assertNoParserError(e);
+        assertEquals("(S : S)", e.getParameters().get(0).getText());
+        assertEquals("S1", e.getReturnType().getText());
+
+        List<RPsiTypeConstraint> constraints = e.getConstraints();
+        assertEquals(2, constraints.size());
+        assertEquals("type 'a t = S.t", constraints.get(0).getText());
+        assertEquals("type comparator_witness = S.comparator_witness", constraints.get(1).getText());
+    }
+
+    @Test
     public void test_with_constraints_parens() {
         RPsiFunctor e = firstOfType(parseCode("module Make(M: SeqType) : (S with type t = M.t) = struct end"), RPsiFunctor.class);
         List<RPsiTypeConstraint> ec = e.getConstraints();

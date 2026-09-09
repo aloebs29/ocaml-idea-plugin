@@ -37,4 +37,46 @@ public class ShowDocOCLTest extends ORBasePlatformTestCase {
         String doc = getDoc(a, LANG);
         assertEquals("<div class=\"definition\"><b>A</b><p><i>let compare</i></p></div><div class=\"content\"><p>compare doc</p></div>", doc);
     }
+
+    @Test
+    public void test_file_module() {
+        configureCode("Doc.mli", "(** doc for the module *)\nval x : int");
+        FileBase a = configureCode("A.ml", "let _ = Doc<caret>.x");
+
+        String doc = getDoc(a, LANG);
+        assertEquals("<div class=\"definition\"><b>module Doc</b></div><div class=\"content\"><p>doc for the module</p></div>", doc);
+    }
+
+    @Test
+    public void test_module_alias_documented_by_its_target() {
+        configureCode("Doc.mli", "(** doc for the module *)\nval x : int");
+        configureCode("Wrapper.mli", "module Doc = Doc");
+        FileBase a = configureCode("A.ml", "open Wrapper\nlet _ = Doc<caret>.x");
+
+        String doc = getDoc(a, LANG);
+        assertEquals("<div class=\"definition\"><b>module Doc</b></div><div class=\"content\"><p>doc for the module</p></div>", doc);
+    }
+
+    @Test
+    public void test_module_alias_keeps_its_own_doc() {
+        configureCode("Doc.mli", "(** doc for the module *)\nval x : int");
+        configureCode("Wrapper.mli", "(** doc for the alias *)\nmodule Doc = Doc");
+        FileBase a = configureCode("A.ml", "open Wrapper\nlet _ = Doc<caret>.x");
+
+        String doc = getDoc(a, LANG);
+        assertEquals("<div class=\"definition\"><b>Wrapper</b><p><i>innermodule Doc</i></p></div><div class=\"content\"><p>doc for the alias</p></div>", doc);
+    }
+
+    // A module aliased next to its definition wins over a same-named module from another directory,
+    // the way Stdio.In_channel means stdio's in_channel.mli and not the stdlib one
+    @Test
+    public void test_module_alias_prefers_a_sibling_file() {
+        myFixture.addFileToProject("stdlib/In_channel.mli", "(** stdlib in_channel *)\ntype t");
+        myFixture.addFileToProject("stdio/In_channel.mli", "(** stdio in_channel *)\ntype t");
+        myFixture.addFileToProject("stdio/Stdio.mli", "module In_channel = In_channel");
+        FileBase a = configureCode("A.ml", "open Stdio\nlet _ = In_channel<caret>.t");
+
+        String doc = getDoc(a, LANG);
+        assertEquals("<div class=\"definition\"><b>module In_channel</b></div><div class=\"content\"><p>stdio in_channel</p></div>", doc);
+    }
 }

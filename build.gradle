@@ -55,8 +55,12 @@ test {
     exclude '**/*_RES_*'
     exclude '**/*RMLTest*'
     exclude '**/*RESTest*'
-    exclude '**/Rml*'
-    exclude '**/Res*'
+    // Named one by one: a '**/Res*' pattern also swallows every Resolve*_OCL_Test
+    exclude '**/RmlDocConverterTest*'
+    exclude '**/RmlParameterInfoHandlerTest*'
+    exclude '**/ResConfigReaderTest*'
+    exclude '**/ResParameterInfoHandlerTest*'
+    exclude '**/Rescript*'
     // only has Reason and Rescript cases
     exclude '**/ORDocumentationProviderTest*'
 }
