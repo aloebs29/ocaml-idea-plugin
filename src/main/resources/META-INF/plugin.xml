@@ -249,6 +249,8 @@
         <postFormatProcessor implementation="com.reason.ide.format.ORPostFormatProcessor"/>
 
         <typedHandler implementation="com.reason.ide.handlers.ORTypedHandler" id="RmlTypedHandler"/>
+        <!-- re-asks ocp-indent once a freshly opened line gets its first token (| end in ...) -->
+        <typedHandler implementation="com.reason.ide.format.OclReindentTypedHandler" id="OclReindentTypedHandler"/>
         <quoteHandler fileType="OCAML" className="com.reason.ide.handlers.OclQuoteHandler"/>
         <quoteHandler fileType="OCAML_INTF" className="com.reason.ide.handlers.OclQuoteHandler"/>
 

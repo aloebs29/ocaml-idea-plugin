@@ -24,6 +24,19 @@ public class OclLineIndentProvider implements LineIndentProvider {
     /** Above that, the cost of piping the file to ocp-indent on every enter isn't worth it. */
     private static final int MAX_TEXT_LENGTH = 1_000_000;
 
+    /**
+     * Stands in for the code the user is about to type on the otherwise empty line.
+     * <p>
+     * ocp-indent answers for a line from what precedes it <em>and</em> from the line's own first token. Asked
+     * about a line with no token at all it assumes the previous expression is being continued, which is almost
+     * never what pressing enter means: after {@code open Stdio} it answers 4 rather than 0, and after
+     * {@code | Some x -> f (a +. g x)} it answers 16 — the column just inside the application. An empty comment
+     * is the only filler that is lexically valid in every position while starting nothing, so the answer stays
+     * the enclosing block's indent: still 2 inside a {@code let} body or after {@code match x with}, but 0 once
+     * the phrase before it is complete.
+     */
+    static final String INDENT_ANCHOR = "(**)";
+
     @Override
     public boolean isSuitableFor(@Nullable Language language) {
         return language == OclLanguage.INSTANCE;
@@ -34,8 +47,14 @@ public class OclLineIndentProvider implements LineIndentProvider {
         if (offset < 0) {
             return null;
         }
+        return computeIndent(project, editor.getDocument(), offset);
+    }
 
-        Document document = editor.getDocument();
+    /**
+     * The indentation the line containing {@code offset} should start with, or null if ocp-indent could not
+     * answer. Shared with {@link OclReindentTypedHandler}, which asks again once the line has a first token.
+     */
+    static @Nullable String computeIndent(@NotNull Project project, @NotNull Document document, int offset) {
         if (MAX_TEXT_LENGTH < document.getTextLength()) {
             return null;
         }
@@ -49,9 +68,15 @@ public class OclLineIndentProvider implements LineIndentProvider {
         // ocp-indent is a line indenter: the indentation of a line only depends on what comes before it, plus
         // the line itself (a line starting with `end` or `|` dedents). Everything after can be dropped, which
         // keeps editing near the top of a big file cheap.
-        String text = document.getText(new TextRange(0, document.getLineEndOffset(lineIndex)));
+        String text = anchorLastLine(document.getText(new TextRange(0, document.getLineEndOffset(lineIndex))));
 
         Integer indent = project.getService(OcpIndentProcess.class).getIndent(file, text, lineIndex + 1);
         return indent == null ? null : " ".repeat(indent);
+    }
+
+    /** Appends {@link #INDENT_ANCHOR} when the line being asked about carries no token of its own. */
+    static @NotNull String anchorLastLine(@NotNull String text) {
+        String lastLine = text.substring(text.lastIndexOf('\n') + 1);
+        return lastLine.isBlank() ? text + INDENT_ANCHOR : text;
     }
 }
