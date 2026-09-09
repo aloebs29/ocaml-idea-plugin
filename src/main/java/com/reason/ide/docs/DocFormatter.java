@@ -24,6 +24,16 @@ class DocFormatter {
     }
 
     static @NotNull String format(@NotNull PsiFile file, @NotNull PsiElement element, @Nullable ORLanguageProperties lang, @NotNull String text) {
+        return format(file, element, lang, null, text);
+    }
+
+    /**
+     * @param signature the type to show next to the name, when it is known. Falls back to whatever the
+     *                  element declares itself, which is nothing at all for a `let` with no annotation.
+     * @param text      the doc comment, possibly empty: an element with a known type is worth showing
+     *                  even when nobody documented it.
+     */
+    static @NotNull String format(@NotNull PsiFile file, @NotNull PsiElement element, @Nullable ORLanguageProperties lang, @Nullable String signature, @NotNull String text) {
         if (file instanceof FileBase source) {
             // Definition
 
@@ -36,9 +46,11 @@ class DocFormatter {
 
                 HtmlBuilder fileBuilder = new HtmlBuilder();
                 fileBuilder.append(definitionBuilder.wrapWith(DocumentationMarkup.DEFINITION_ELEMENT));
-                fileBuilder.append(new HtmlBuilder()
-                        .append(newConverter(source).convert(element, text))
-                        .wrapWith(DocumentationMarkup.CONTENT_ELEMENT));
+                if (!text.isEmpty()) {
+                    fileBuilder.append(new HtmlBuilder()
+                            .append(newConverter(source).convert(element, text))
+                            .wrapWith(DocumentationMarkup.CONTENT_ELEMENT));
+                }
                 return fileBuilder.toString();
             }
 
@@ -55,26 +67,29 @@ class DocFormatter {
                     definitionBuilder.append(HtmlChunk.raw("<p><i>"));
                     definitionBuilder.append(HtmlChunk.text(className + " " + name));
 
-                    if (element instanceof RPsiSignatureElement) {
-                        RPsiSignature signature = ((RPsiSignatureElement) element).getSignature();
-                        if (signature != null) {
-                            definitionBuilder.append(HtmlChunk.text(" : ")).append(HtmlChunk.text(signature.asText(lang)).wrapWith("code"));
-                        }
+                    String type = signature;
+                    if (type == null && element instanceof RPsiSignatureElement signatureElement) {
+                        RPsiSignature elementSignature = signatureElement.getSignature();
+                        type = elementSignature == null ? null : elementSignature.asText(lang);
+                    }
+                    if (type != null) {
+                        definitionBuilder.append(HtmlChunk.text(" : ")).append(HtmlChunk.text(type).wrapWith("code"));
                     }
                 }
                 definitionBuilder.append(HtmlChunk.raw("</i></p>"));
             }
 
-            // Content
-
-            HtmlBuilder contentBuilder = new HtmlBuilder();
-            contentBuilder.append(newConverter(source).convert(element, text));
-
             // final render
 
             HtmlBuilder builder = new HtmlBuilder();
             builder.append(definitionBuilder.wrapWith(DocumentationMarkup.DEFINITION_ELEMENT));
-            builder.append(contentBuilder.wrapWith(DocumentationMarkup.CONTENT_ELEMENT));
+
+            // Content - an undocumented element renders as its definition alone
+            if (!text.isEmpty()) {
+                HtmlBuilder contentBuilder = new HtmlBuilder();
+                contentBuilder.append(newConverter(source).convert(element, text));
+                builder.append(contentBuilder.wrapWith(DocumentationMarkup.CONTENT_ELEMENT));
+            }
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug(builder.toString());

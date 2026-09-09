@@ -106,20 +106,53 @@ public class ORDocumentationProvider extends AbstractDocumentationProvider {
             }
         }
 
-        if (comment != null) {
-            if (comment instanceof RPsiAnnotation) {
-                PsiElement value = ((RPsiAnnotation) comment).getValue();
-                String text = value == null ? null : value.getText();
-                return text == null ? null : text.substring(1, text.length() - 1);
-            }
-
-            return isSpecialComment(comment)
-                    ? DocFormatter.format(docElement.getContainingFile(), docElement, languageProperties, comment.getText())
-                    : comment.getText();
+        if (comment instanceof RPsiAnnotation annotation) {
+            PsiElement value = annotation.getValue();
+            String text = value == null ? null : value.getText();
+            return text == null ? null : text.substring(1, text.length() - 1);
         }
-        //}
 
-        return null;
+        if (comment != null && !isSpecialComment(comment)) {
+            return comment.getText();
+        }
+
+        // A doc comment is not required to have something to say. Most definitions in a project are
+        // undocumented, and their type - written down or inferred from the cmt - is what the reader is
+        // after; returning null here left the quick doc popup empty for all of them.
+        PsiFile docFile = docElement.getContainingFile();
+        if (docFile == null) {
+            return null;
+        }
+
+        String signature = findSignature(docElement, originalElement, languageProperties);
+        return DocFormatter.format(docFile, docElement, languageProperties, signature, comment == null ? "" : comment.getText());
+    }
+
+    /**
+     * The type to display for an element: the one it declares, else the one the compiler inferred. A
+     * usage is looked up before the definition, since that is where a polymorphic function has been
+     * instantiated to something concrete.
+     */
+    private @Nullable String findSignature(@NotNull PsiElement docElement, @Nullable PsiElement originalElement, @Nullable ORLanguageProperties languageProperties) {
+        if (docElement instanceof RPsiModule || docElement instanceof FileBase) {
+            return null;
+        }
+
+        if (docElement instanceof RPsiSignatureElement signatureElement) {
+            RPsiSignature signature = signatureElement.getSignature();
+            if (signature != null) {
+                return signature.asText(languageProperties);
+            }
+        }
+
+        PsiFile originalFile = originalElement == null ? null : originalElement.getContainingFile();
+        String inferred = originalFile == null ? null : getInferredSignature(originalElement, originalFile, languageProperties);
+        if (inferred == null) {
+            PsiFile docFile = docElement.getContainingFile();
+            inferred = docFile == null ? null : getInferredSignature(docElement, docFile, languageProperties);
+        }
+
+        return inferred;
     }
 
     @Override

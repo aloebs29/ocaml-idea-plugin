@@ -56,29 +56,13 @@ public class InferredTypesService {
             if (signatures == null) {
                 InsightManager insightManager = project.getService(InsightManager.class);
 
-                // Find namespace if ocaml is compiled through dune
-                final String[] namespace = {""};
-                ORResolvedCompiler<? extends ORCompiler> compiler = project.getService(ORCompilerManager.class).getCompiler(sourceFile);
-                if (compiler != null && compiler.getType() == DUNE) {
-                    VirtualFile duneSource = ORFileUtils.findAncestor(project, sourceFile, "dune");
-                    PsiFile dune = duneSource == null ? null : PsiManager.getInstance(project).findFile(duneSource);
-                    if (dune instanceof DuneFile) {
-                        RPsiDuneStanza library = ((DuneFile) dune).getStanza("library");
-                        RPsiDuneField name = library == null ? null : library.getField("name");
-                        if (name == null && library != null) {
-                            name = library.getField("public_name");
-                        }
-                        if (name != null) {
-                            namespace[0] = StringUtil.toFirstLower(name.getValue()) + "__";
-                        }
-                    }
-                }
+                final String namespace = findNamespace(project, sourceFile);
 
                 if (!DumbService.isDumb(project)) {
                     ReadAction.nonBlocking((Callable<Void>) () -> {
                                 LOG.debug("Reading types from file", psiFile);
                                 String nameWithoutExtension = sourceFile == null ? "" : sourceFile.getNameWithoutExtension();
-                                VirtualFile cmtFile = ORFileUtils.findCmtFileFromSource(project, nameWithoutExtension, namespace[0]);
+                                VirtualFile cmtFile = ORFileUtils.findCmtFileFromSource(project, nameWithoutExtension, namespace);
                                 if (cmtFile != null) {
                                     Path cmtPath = FileSystems.getDefault().getPath(cmtFile.getPath());
                                     insightManager.queryTypes(sourceFile, cmtPath,
@@ -97,6 +81,45 @@ public class InferredTypesService {
             // might produce an AssertionError when project is being disposed, but the invokeLater still
             // process that code
         }
+    }
+
+    /** The prefix the compiler of {@code sourceFile} puts in front of the module it defines. */
+    public static @NotNull String findNamespace(@NotNull Project project, @Nullable VirtualFile sourceFile) {
+        if (sourceFile == null) {
+            return "";
+        }
+
+        ORResolvedCompiler<? extends ORCompiler> compiler = project.getService(ORCompilerManager.class).getCompiler(sourceFile);
+        if (compiler == null || compiler.getType() != DUNE) {
+            return "";
+        }
+
+        VirtualFile duneSource = ORFileUtils.findAncestor(project, sourceFile, "dune");
+        PsiFile dune = duneSource == null ? null : PsiManager.getInstance(project).findFile(duneSource);
+        return dune instanceof DuneFile duneFile ? findDuneNamespace(duneFile) : "";
+    }
+
+    /**
+     * The prefix dune puts in front of the modules a stanza defines. A library wraps its modules behind
+     * its own name - `hello_ocaml__Foo` - while an executable is always wrapped behind `dune__exe__`,
+     * whatever its `name` is. Returns an empty string when the stanza wraps nothing.
+     */
+    static @NotNull String findDuneNamespace(@NotNull DuneFile duneFile) {
+        RPsiDuneStanza library = duneFile.getStanza("library");
+        if (library != null) {
+            RPsiDuneField wrapped = library.getField("wrapped");
+            if (wrapped != null && "false".equals(wrapped.getValue())) {
+                return "";
+            }
+            RPsiDuneField name = library.getField("name");
+            if (name == null) {
+                name = library.getField("public_name");
+            }
+            return name == null ? "" : StringUtil.toFirstLower(name.getValue()) + "__";
+        }
+
+        boolean isExecutable = duneFile.getStanza("executable") != null || duneFile.getStanza("executables") != null;
+        return isExecutable ? "dune__exe__" : "";
     }
 
     public static void annotatePsiFile(@NotNull Project project, @Nullable ORLanguageProperties lang, @Nullable VirtualFile sourceFile, @Nullable InferredTypes types) {

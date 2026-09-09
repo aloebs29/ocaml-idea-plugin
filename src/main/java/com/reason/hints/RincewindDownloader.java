@@ -74,7 +74,8 @@ public class RincewindDownloader extends Task.Backgroundable {
                         VirtualFile[] openedFiles = FileEditorManager.getInstance(myProject).getOpenFiles();
                         for (VirtualFile openedFile : openedFiles) {
                             // Query types and update psi cache
-                            VirtualFile cmtFile = ORFileUtils.findCmtFileFromSource(myProject, openedFile.getNameWithoutExtension(), null);
+                            VirtualFile cmtFile = ORFileUtils.findCmtFileFromSource(myProject, openedFile.getNameWithoutExtension(),
+                                    InferredTypesService.findNamespace(myProject, openedFile));
                             if (cmtFile != null) {
                                 Path cmtPath = FileSystems.getDefault().getPath(cmtFile.getPath());
 

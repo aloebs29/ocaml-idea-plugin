@@ -23,25 +23,45 @@ public class ORFileUtils {
     public static VirtualFile findCmtFileFromSource(@NotNull Project project, @NotNull String filenameWithoutExtension, @Nullable String namespace) {
         if (!DumbService.isDumb(project)) {
             GlobalSearchScope scope = GlobalSearchScope.allScope(project);
-            String filename = (namespace == null ? "" : namespace) + filenameWithoutExtension + ".cmt";
 
-            Collection<VirtualFile> cmtFiles = FilenameIndex.getVirtualFilesByName(filename, scope);
-            if (cmtFiles.isEmpty()) {
-                LOG.debug("File module NOT FOUND", filename);
-                return null;
+            for (String filename : cmtCandidates(namespace, filenameWithoutExtension)) {
+                Collection<VirtualFile> cmtFiles = FilenameIndex.getVirtualFilesByName(filename, scope);
+                if (!cmtFiles.isEmpty()) {
+                    VirtualFile firstFile = cmtFiles.iterator().next();
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Found cmt " + filename + " (" + firstFile.getPath() + ")");
+                    }
+                    return firstFile;
+                }
             }
 
-            VirtualFile firstFile = cmtFiles.iterator().next();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Found cmt " + filename + " (" + firstFile.getPath() + ")");
-            }
-
-            return firstFile;
+            LOG.debug("File module NOT FOUND", filenameWithoutExtension);
         } else {
             LOG.info("Cant find cmt while reindexing");
         }
 
         return null;
+    }
+
+    /**
+     * The names a cmt file may have, most specific first. A source file does not map to a single name:
+     * dune wraps modules, so `bin/main.ml` of an `executable` is compiled to `dune__exe__Main.cmt` and
+     * `lib/foo.ml` of `library hello_ocaml` to `hello_ocaml__Foo.cmt` - the module name, capitalised,
+     * behind a namespace. The namespace is dropped last, both because a library can be `(wrapped false)`
+     * and because the module that carries a library's own name - `hello_ocaml.cmt` - is not prefixed.
+     */
+    static @NotNull List<String> cmtCandidates(@Nullable String namespace, @NotNull String filenameWithoutExtension) {
+        String ns = namespace == null ? "" : namespace;
+        String moduleName = StringUtil.toFirstUpper(filenameWithoutExtension);
+
+        List<String> candidates = new ArrayList<>(4);
+        for (String name : List.of(ns + moduleName, ns + filenameWithoutExtension, moduleName, filenameWithoutExtension)) {
+            String cmt = name + ".cmt";
+            if (!candidates.contains(cmt)) {
+                candidates.add(cmt);
+            }
+        }
+        return candidates;
     }
 
     public static @NotNull String toRelativeSourceName(@NotNull Project project, @NotNull VirtualFile sourceFile, @NotNull Path relativePath) {

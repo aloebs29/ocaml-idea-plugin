@@ -19,4 +19,17 @@ public class ORFileUtilsTest extends ORBasePlatformTestCase {
         String relativeSource = ORFileUtils.toRelativeSourceName(getProject(), ORFileUtils.getVirtualFile(binary), fs.getPath("src/Config-Foo.cmt"));
         assertEquals(fs.getPath("src", "Config.re").toString(), relativeSource);
     }
+
+    // A dune module is compiled behind its stanza's namespace, and under the module name rather than
+    // the file name: `bin/main.ml` of an executable ends up as `dune__exe__Main.cmt`
+    @Test
+    public void test_cmt_candidates_of_a_wrapped_module() {
+        assertEquals("[dune__exe__Main.cmt, dune__exe__main.cmt, Main.cmt, main.cmt]",
+                ORFileUtils.cmtCandidates("dune__exe__", "main").toString());
+    }
+
+    @Test
+    public void test_cmt_candidates_without_a_namespace() {
+        assertEquals("[Main.cmt, main.cmt]", ORFileUtils.cmtCandidates(null, "main").toString());
+    }
 }
