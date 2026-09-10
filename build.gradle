@@ -63,6 +63,24 @@ test {
     exclude '**/Rescript*'
     // only has Reason and Rescript cases
     exclude '**/ORDocumentationProviderTest*'
+
+    // Semantic features moved to ocaml-lsp-server (see the LSP4IJ section of plugin.xml). These suites all
+    // drive an extension point this plugin no longer registers, so they assert against a provider that is
+    // not there any more rather than against a regression. The sources are kept: re-registering an extension
+    // in plugin.xml brings its suite back with it.
+    //
+    // What each one covered, and what answers it now:
+    exclude '**/Resolve*_OCL_Test*'           // reference resolution      -> LSP definition
+    exclude '**/ORModuleResolutionPsiGist*'   // module resolution cache   -> LSP
+    exclude '**/*Completion_OCL_Test*'        // completion contributors   -> LSP completion
+    exclude '**/ShowDocOCLTest*'              // quick doc                 -> LSP hover
+    exclude '**/ShowInferredDoc_OCL_Test*'    // rincewind inferred types  -> LSP hover
+    exclude '**/OclParameterInfoHandlerTest*' // parameter info            -> LSP signature help
+    exclude '**/LineMarkerProviderOCLTest*'   // gutter icons              -> LSP
+    exclude '**/Find*UsagesOCLTest*'          // find usages               -> LSP references
+    exclude '**/GotoImplementationOCLTest*'   // goto implementation       -> LSP implementation
+    exclude '**/RenameLowerTest*'             // rename                    -> LSP rename
+    exclude '**/RenameUpper_OCL_Test*'        // rename                    -> LSP rename
 }
 
 intellijPlatform {

@@ -9,6 +9,9 @@
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.lang</depends>
+    <!-- Semantic features are delegated to ocaml-lsp-server through LSP4IJ, so this is a hard dependency:
+         without it there is no hover, completion, navigation or diagnostics at all. See README.md. -->
+    <depends>com.redhat.devtools.lsp4ij</depends>
     <depends optional="true" config-file="java-deps.xml">com.intellij.modules.java</depends>
 
     <actions>
@@ -167,18 +170,31 @@
         <lang.braceMatcher language="Dune" implementationClass="com.reason.ide.match.DunePairedBraceMatcher"/>
 
         <!--
-         | Doc
-         -->
-
-        <lang.documentationProvider language="OCaml" implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-        <lang.documentationProvider language="OCamlP4"
-                                    implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-        <lang.documentationProvider language="Mlg" implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-        <lang.documentationProvider language="Mll" implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-        <lang.documentationProvider language="Mly" implementationClass="com.reason.ide.docs.ORDocumentationProvider"/>
-
-        <!--
-         | Search / navigating
+         | Doc, search and navigation - all delegated to ocaml-lsp-server, see the LSP4IJ section below.
+         |
+         | Everything that used to answer these questions from this plugin's own PSI is unregistered rather
+         | than deleted, so the sources are still in the tree and git history:
+         |
+         |   lang.documentationProvider   ORDocumentationProvider     -> LSP hover / documentation
+         |   completion.contributor       Ocl*CompletionContributor   -> LSP completion
+         |   lang.findUsagesProvider      OclFindUsagesProvider       -> LSP references
+         |   gotoClassContributor         ORModuleContributor         -> LSP workspace symbols
+         |   definitionsScopedSearch      ORImplementationSearch      -> LSP implementation
+         |   targetElementEvaluator       ORTargetElementEvaluator    -> LSP definition
+         |   codeInsight.parameterInfo    OclParameterInfoHandler     -> LSP signature help
+         |   codeInsight.lineMarkerProvider ORLineMarkerProvider      -> LSP
+         |   externalAnnotator            ORErrorAnnotator            -> LSP diagnostics (from merlin)
+         |   editor.linePainter           OREditorLinePainter         -> LSP inlay hints
+         |   postFormatProcessor          ORPostFormatProcessor       -> LSP formatting (ocamlformat)
+         |   lang.refactoringSupport      ORRefactoringSupportProvider-> LSP rename
+         |   moduleRendererFactory        FileModuleDataModuleRenderer
+         |
+         | The indexes below are NOT optional and must stay registered. The parser still builds stub-based PSI,
+         | and the platform's 'Stubs' index calls indexStub() on every stub it writes, which sinks into these
+         | extensions by key. Unregistering one makes indexing throw
+         | "Can't find stub index extension for key 'reason.open'" for every OCaml file - a broken index, not a
+         | missing feature. They are cheap to keep: nothing queries them for doc, completion or diagnostics any
+         | more.
          -->
 
         <stubIndex implementation="com.reason.ide.search.index.ModuleFqnIndex"/>
@@ -206,19 +222,6 @@
         <fileBasedIndex implementation="com.reason.ide.search.index.FileModuleIndex"/>
         <fileBasedIndex implementation="com.reason.ide.search.index.NamespaceIndex"/>
 
-        <lang.findUsagesProvider language="OCaml" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
-        <lang.findUsagesProvider language="OCamlP4" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
-        <lang.findUsagesProvider language="Mlg" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
-        <lang.findUsagesProvider language="Mll" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
-        <lang.findUsagesProvider language="Mly" implementationClass="com.reason.ide.search.OclFindUsagesProvider"/>
-
-        <gotoClassContributor implementation="com.reason.ide.go.ORModuleContributor"/>
-
-        <!-- for ctrl + alt + click navigation -->
-        <definitionsScopedSearch implementation="com.reason.ide.search.ORImplementationSearch"/>
-
-        <targetElementEvaluator language="OCaml" implementationClass="com.reason.ide.files.ORTargetElementEvaluator"/>
-
         <!--
          | SDK / Libs / Settings
          -->
@@ -237,25 +240,14 @@
         <projectSdkSetupValidator implementation="com.reason.ide.library.OclSdkSetupValidator"/>
 
         <!--
-         | Insight
-         -->
-
-        <editor.linePainter implementation="com.reason.ide.hints.OREditorLinePainter"/>
-
-        <!--
          | Others
          -->
-
-        <postFormatProcessor implementation="com.reason.ide.format.ORPostFormatProcessor"/>
 
         <typedHandler implementation="com.reason.ide.handlers.ORTypedHandler" id="RmlTypedHandler"/>
         <!-- re-asks ocp-indent once a freshly opened line gets its first token (| end in ...) -->
         <typedHandler implementation="com.reason.ide.format.OclReindentTypedHandler" id="OclReindentTypedHandler"/>
         <quoteHandler fileType="OCAML" className="com.reason.ide.handlers.OclQuoteHandler"/>
         <quoteHandler fileType="OCAML_INTF" className="com.reason.ide.handlers.OclQuoteHandler"/>
-
-        <lang.refactoringSupport language="OCaml"
-                                 implementationClass="com.reason.ide.refactor.ORRefactoringSupportProvider"/>
 
         <iconProvider implementation="com.reason.ide.IconProvider"/>
 
@@ -264,13 +256,8 @@
         <annotator language="OCaml" implementationClass="com.reason.ide.highlight.OclSyntaxAnnotator"/>
         <annotator language="Dune" implementationClass="com.reason.ide.highlight.DuneSyntaxAnnotator"/>
 
-        <externalAnnotator language="OCaml" implementationClass="com.reason.ide.annotations.ORErrorAnnotator"/>
-        <problemFileHighlightFilter implementation="com.reason.ide.annotations.ErrorFileHighlighter"/>
-
-        <completion.contributor language="OCaml"
-                                implementationClass="com.reason.ide.insight.OclCompletionContributor"/>
-        <completion.contributor language="OCaml"
-                                implementationClass="com.reason.ide.insight.OclKeywordCompletionContributor"/>
+        <!-- Mll and Mly keep keyword completion: the language server only handles .ml and .mli, so nothing
+             else offers completion in a lexer or grammar file. -->
         <completion.contributor language="Mll"
                                 implementationClass="com.reason.ide.insight.OclKeywordCompletionContributor"/>
         <completion.contributor language="Mly"
@@ -316,18 +303,20 @@
         <toolWindow id="Dune:" factoryClass="com.reason.ide.console.dune.DuneToolWindowFactory"
                     anchor="bottom" icon="com.reason.ide.ORIcons.DUNE_TOOL"/>
 
-        <codeInsight.parameterInfo language="OCaml"
-                                   implementationClass="com.reason.ide.hints.OclParameterInfoHandler"/>
-
         <consoleFilterProvider implementation="com.reason.ide.console.ORConsoleFilterProvider"/>
-        <editorFactoryListener implementation="com.reason.ide.OREditorFactoryListener"/>
+    </extensions>
 
-        <moduleRendererFactory implementation="com.reason.ide.go.FileModuleDataModuleRendererFactory"/>
-
-        <!-- Gutter icons -->
-
-        <codeInsight.lineMarkerProvider language="OCaml"
-                                        implementationClass="com.reason.ide.go.ORLineMarkerProvider"/>
+    <!--
+     | Language server
+     |
+     | ocamllsp is not shipped or installed by this plugin: it is taken from the configured opam switch, which
+     | is what keeps it in step with that switch's compiler. Install it with `opam install ocaml-lsp-server`.
+     -->
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="ocamllsp" name="OCaml (ocamllsp)"
+                factoryClass="com.reason.ide.lsp.OCamlLspServerFactory"/>
+        <!-- Covers both .ml and .mli: they share the OCaml language, and ocamllsp tells them apart by URI. -->
+        <languageMapping language="OCaml" serverId="ocamllsp" languageId="ocaml"/>
     </extensions>
 
 </idea-plugin>

@@ -109,7 +109,8 @@ public final class DuneCompiler implements ORCompiler {
                 console.attachToProcess(processHandler);
                 process.startNotify();
 
-                myProject.getService(InsightManager.class).downloadRincewindIfNeeded(sourceFile);
+                // Inferred types come from merlin through the language server now, so a build no longer has to
+                // pull down a rincewind binary. InsightManager is still reachable from the .cmt viewer.
             } else {
                 myProcessStarted.compareAndSet(true, false);
             }

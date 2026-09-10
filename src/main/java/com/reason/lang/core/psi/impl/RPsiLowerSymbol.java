@@ -16,9 +16,10 @@ public class RPsiLowerSymbol extends LeafPsiElement {
     }
     // endregion
 
+    /** Always null - see {@link RPsiUpperSymbol#getReference()} for why. */
     @Override
-    public @NotNull ORPsiLowerSymbolReference getReference() {
-        return new ORPsiLowerSymbolReference(this, myTypes);
+    public @Nullable ORPsiLowerSymbolReference getReference() {
+        return null;
     }
 
     @Override

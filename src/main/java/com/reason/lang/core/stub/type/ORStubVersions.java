@@ -19,7 +19,10 @@ public class ORStubVersions {
     public static final int VAL = 13;
     public static final int VARIANT = 9;
 
-    public static final int OCL_FILE = 11;
+    // 11 -> 12: the build that unregistered the stub indexes wrote partial/failed stub trees for every OCaml
+    // file it indexed ("Can't find stub index extension for key 'reason.open'"). Force a clean re-stub rather
+    // than leave that on disk.
+    public static final int OCL_FILE = 12;
     public static final int RES_FILE = 10;
     public static final int RML_FILE = 10;
 }

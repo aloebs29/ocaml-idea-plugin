@@ -5,8 +5,11 @@ OCaml language support for IntelliJ-platform IDEs (developed against CLion), inc
 This is a **personal fork** of [giraud/reasonml-idea-plugin](https://github.com/giraud/reasonml-idea-plugin),
 which is in maintenance mode. Nothing here is intended to go back upstream.
 
-Two things differ from upstream:
+Three things differ from upstream:
 
+- **Semantic features come from `ocaml-lsp-server`,** not from this plugin's own PSI. See
+  [Architecture](#architecture) — this is the big one, and it is why the plugin requires
+  [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij).
 - **It is OCaml only.** Reason, ReScript, BuckleScript and Esy are no longer registered, so `.re`, `.rei`,
   `.res` and `.resi` files are left to whatever else handles them. Their sources and tests are still in the
   tree (see [Re-enabling a language](#re-enabling-a-language)), just not wired into `plugin.xml`.
@@ -15,6 +18,65 @@ Two things differ from upstream:
 
 Registered file types: `.ml`, `.mli`, `.ml4`, `.mlg`, `.mll`, `.mly`, `dune` / `dune-project` / `jbuild`,
 and `.cmt`.
+
+## Architecture
+
+Upstream answers "what is this symbol, and what is its type?" by parsing OCaml into its own PSI, building
+stub indexes over it, and resolving references itself. That works, but it means re-implementing the OCaml
+name resolution and type rules inside a Java plugin, and keeping up as the language moves. Every fix in this
+fork's early history was a symptom of that: the implicitly-opened module was looked up as `Pervasives`
+(removed in OCaml 5.0), inferred types were read out of `.cmt` files under a name dune never produces, and a
+parser change silently invalidated persisted stub trees.
+
+So the semantic half is delegated to [ocaml-lsp-server](https://github.com/ocaml/ocaml-lsp), which is built
+on merlin — the same engine tuareg and the VS Code extension use. **merlin gets its per-module compiler
+flags from dune** (via `dune ocaml-merlin`), so wrapped-module naming, include paths and the implicit
+`Stdlib` are dune's answer rather than something this plugin has to reconstruct.
+
+What each side owns:
+
+| This plugin | ocaml-lsp-server (via LSP4IJ) |
+|---|---|
+| Lexer, parser, PSI | Hover: types and documentation |
+| Syntax highlighting, brace matching | Completion |
+| Folding, structure view, commenter | Go to definition / implementation |
+| Indentation on enter (`ocp-indent`) | Find usages, rename |
+| Dune file support and build actions | Diagnostics (from merlin) |
+| opam root / switch settings | Formatting (`ocamlformat`) |
+| `.cmt` viewer (debug aid) | Signature help, inlay hints |
+
+The extensions that used to answer the right-hand column are **unregistered, not deleted** — the sources are
+still in the tree, and `plugin.xml` lists each one against the LSP feature that replaced it. Three
+consequences worth knowing:
+
+- **The stub and file indexes stay registered, and `ORStubVersions` still needs a bump when the parser
+  changes.** The parser still builds stub-based PSI, and the platform's `Stubs` index calls `indexStub()`
+  on every stub, which sinks into those extensions *by key* — unregistering one breaks indexing for every
+  OCaml file rather than just disabling a feature. Nothing queries them for doc or completion any more, so
+  they are cheap to keep, but they are not optional.
+- **`RPsiUpperSymbol.getReference()` and `RPsiLowerSymbol.getReference()` return null.** References are part
+  of the PSI, not an extension point, so unregistering providers did not stop resolution from running. They
+  also take priority over the language server — a resolvable PSI reference is what the platform navigates
+  with — so returning null is what makes ctrl-click actually reach merlin.
+- **Rincewind is off the critical path.** merlin types from source against dependency `.cmi` files, so
+  inferred types no longer need a `.cmt` for the file itself, and `dune build @check` is no longer required
+  to see a type on hover. The rincewind plumbing survives only behind the `.cmt` viewer.
+
+### Prerequisites
+
+The plugin does not ship or install a language server. You need, in the selected opam switch:
+
+```bash
+opam install ocaml-lsp-server
+```
+
+and **LSP4IJ installed in the IDE** — it is a hard `<depends>`, so without it this plugin will not load at
+all. The server is launched as `ocamllsp` through `opam exec`, inheriting the switch environment computed
+from the opam settings, which is what puts `dune` on its `PATH`. A project must have been built (`dune
+build`) at least once before merlin has any configuration to answer from.
+
+The **LSP console** (View → Tool Windows → Language Servers) shows the server's lifecycle and every request,
+and is the first place to look when a semantic feature returns nothing.
 
 ## Building
 
@@ -85,17 +147,23 @@ Every reason indentation gives up is logged under `format.ocaml.indent` in `idea
 place to look if enter leaves the caret in column 0.
 
 `ocp-indent` reads a `.ocp-indent` file from the project root, so per-project indentation settings are
-honoured. Note that reformatting the whole file (ctrl+alt+L) still goes through `ocamlformat`, which is a
-separate tool with its own configuration.
+honoured. Indentation is the one editing feature deliberately **not** delegated to the language server: LSP
+has no "indent this new line" request, only whole-range formatting, which is the wrong shape for pressing
+enter.
 
-### Rincewind (inferred type hints) — must be built by hand
+Reformatting the whole file (ctrl+alt+L) still runs `ocamlformat`, but now through the language server
+rather than this plugin's own post-format processor. It remains a separate tool with its own configuration,
+and needs `opam install ocamlformat` plus an `.ocamlformat` file in the project.
+
+### Rincewind — no longer needed
+
+**Nothing in normal editing uses rincewind any more.** Inferred types come from merlin through the language
+server, so you can skip this section entirely; it is kept only because the `.cmt` viewer still shells out to
+the binary, and because the naming convention is impossible to guess.
 
 Rincewind is a small OCaml binary that reads `.cmt` files to produce inferred type hints. **Upstream never
 published a build newer than OCaml 4.14**, for any platform, so on any modern switch you have to build it
-yourself. This is the one piece of external setup that cannot be automated here.
-
-Everything else — compiler errors and warnings, completion, navigation, hover documentation — is independent
-of rincewind. Without it you get a single warning per session and no inferred type hints.
+yourself.
 
 To build it:
 
@@ -132,6 +200,25 @@ On macOS and Linux, make it executable (`chmod +x`).
 
 This directory is **per IDE version**, so upgrading e.g. CLion 2026.1 → 2026.2 needs the binary copied
 across once. This is the only location checked — there are no fallbacks to older layouts.
+
+## Backing out to PSI-based semantics
+
+The PSI resolution layer was unregistered, not deleted, so going back is a `plugin.xml` edit rather than a
+revert. The LSP section of `plugin.xml` lists every removed extension against the LSP feature that replaced
+it; restore the ones you want and drop the matching `exclude` lines from the `test` block in `build.gradle`.
+
+Three things to remember if you do:
+
+- **Restore the two `getReference()` methods first.** `RPsiUpperSymbol` and `RPsiLowerSymbol` return null, so
+  every provider that resolves a symbol will quietly find nothing until they hand back a real reference again.
+  This is the piece that is *not* just a `plugin.xml` edit.
+- **Bump `ORStubVersions.OCL_FILE` and `MODULE`, and `ORModuleResolutionPsiGist.VERSION`.** Stub trees on disk
+  were built by whatever parser was current when they were written; querying them from a changed parser is the
+  `UpToDateStubIndexMismatch` situation, and it shows up as a SEVERE blaming this plugin rather than as a
+  wrong answer.
+- **Expect duplicates.** Nothing suppresses the plugin's own providers while the language server is running,
+  so re-registering completion or documentation gives you two of each. Remove the
+  `com.redhat.devtools.lsp4ij` extensions block as well if you want the old behaviour back cleanly.
 
 ## Re-enabling a language
 
