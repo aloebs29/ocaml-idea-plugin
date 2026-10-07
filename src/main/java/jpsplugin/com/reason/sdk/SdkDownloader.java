@@ -55,7 +55,7 @@ public class SdkDownloader {
                 File tarPath = uncompress(targetSdkLocation);
                 FileUtil.delete(targetSdkLocation);
                 indicator.setText("Untar SDK");
-                new Decompressor.Tar(tarPath).filter(KEEP_OCAML_SOURCES).extract(m_sdkHome);
+                new Decompressor.Tar(tarPath.toPath()).filter(KEEP_OCAML_SOURCES).extract(m_sdkHome.toPath());
                 FileUtil.delete(tarPath);
             } catch (IOException e) {
                 Notifications.Bus.notify(
